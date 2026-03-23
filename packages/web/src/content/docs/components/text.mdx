@@ -12,7 +12,7 @@ Display styled text content with support for colors, attributes, and text select
 
 ### Renderable API
 
-```typescript
+```ts example
 import { TextRenderable, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -28,7 +28,7 @@ renderer.root.add(text)
 
 ### Construct API
 
-```typescript
+```ts example
 import { Text, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -45,7 +45,7 @@ renderer.root.add(
 
 Combine multiple text attributes using bitwise OR:
 
-```typescript
+```ts example
 import { TextRenderable, TextAttributes } from "@opentui/core"
 
 const styledText = new TextRenderable(renderer, {
@@ -73,7 +73,7 @@ const styledText = new TextRenderable(renderer, {
 
 Use the `t` template literal for inline styling within a single text element:
 
-```typescript
+```ts example
 import { TextRenderable, t, bold, underline, fg, bg, italic } from "@opentui/core"
 
 const richText = new TextRenderable(renderer, {
@@ -103,7 +103,7 @@ t`${bold(fg("#FFFF00")("bold yellow"))}`
 
 ## Positioning
 
-```typescript
+```ts example
 const text = new TextRenderable(renderer, {
   id: "positioned",
   content: "Absolute position",
@@ -117,7 +117,7 @@ const text = new TextRenderable(renderer, {
 
 Enable text selection for copying:
 
-```typescript
+```ts example
 const selectableText = new TextRenderable(renderer, {
   id: "selectable",
   content: "Select me!",
@@ -145,7 +145,7 @@ const nonSelectable = new TextRenderable(renderer, {
 
 ## Example: status bar
 
-```typescript
+```ts example
 import { Text, Box, t, bold, fg } from "@opentui/core"
 
 const statusBar = Box(

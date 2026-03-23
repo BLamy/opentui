@@ -4,16 +4,27 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
+    "dev": "bun run sync:core-wasm && astro dev",
+    "build": "bun run sync:core-wasm && astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "scaffold": "bun scripts/test-doc-examples.ts"
+    "scaffold": "bun scripts/test-doc-examples.ts",
+    "sync:core-wasm": "bun scripts/sync-core-wasm.ts"
   },
   "dependencies": {
     "@astrojs/mdx": "^4.3.1",
+    "@babel/core": "7.28.0",
+    "@babel/preset-typescript": "7.27.1",
     "@opentui/core": "workspace:*",
-    "astro": "^5.10.2"
+    "@opentui/react": "workspace:*",
+    "@opentui/solid": "workspace:*",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "astro": "5.10.2",
+    "babel-preset-solid": "1.9.10",
+    "monaco-editor": "^0.55.1",
+    "react": "^19.1.1",
+    "solid-js": "^1.9.10"
   },
   "devDependencies": {
     "@types/bun": "latest",

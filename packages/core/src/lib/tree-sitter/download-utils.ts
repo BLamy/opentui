@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from "fs/promises"
 import * as path from "path"
 
 export interface DownloadResult {
-  content?: Buffer
+  content?: Uint8Array
   filePath?: string
   error?: string
 }
@@ -60,10 +60,10 @@ export class DownloadUtils {
         if (!response.ok) {
           return { error: `Failed to fetch from ${source}: ${response.statusText}` }
         }
-        const content = Buffer.from(await response.arrayBuffer())
+        const content = new Uint8Array(await response.arrayBuffer())
 
         try {
-          await writeFile(cacheFile, Buffer.from(content))
+          await writeFile(cacheFile, content)
           console.log(`Cached: ${source}`)
         } catch (cacheError) {
           console.warn(`Failed to cache: ${cacheError}`)
@@ -99,9 +99,9 @@ export class DownloadUtils {
         if (!response.ok) {
           return { error: `Failed to fetch from ${source}: ${response.statusText}` }
         }
-        const content = Buffer.from(await response.arrayBuffer())
+        const content = new Uint8Array(await response.arrayBuffer())
 
-        await writeFile(targetPath, Buffer.from(content))
+        await writeFile(targetPath, content)
         console.log(`Downloaded: ${source} -> ${targetPath}`)
 
         return { content, filePath: targetPath }

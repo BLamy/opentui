@@ -12,7 +12,7 @@ Displays syntax-highlighted code using Tree-sitter. Supports many languages with
 
 ### Renderable API
 
-```typescript
+```ts example
 import { CodeRenderable, createCliRenderer, SyntaxStyle, RGBA } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -44,7 +44,7 @@ renderer.root.add(code)
 
 ### Construct API
 
-```typescript
+```ts example
 import { Code, Box, createCliRenderer, SyntaxStyle, RGBA } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -135,7 +135,17 @@ Code uses Tree-sitter for parsing. Tree-sitter supports these languages:
 
 Enable streaming mode when content arrives incrementally, like LLM output:
 
-```typescript
+```ts example
+import { CodeRenderable, SyntaxStyle, RGBA, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+const syntaxStyle = SyntaxStyle.fromStyles({
+  keyword: { fg: RGBA.fromHex("#FF7B72"), bold: true },
+  string: { fg: RGBA.fromHex("#A5D6FF") },
+  default: { fg: RGBA.fromHex("#E6EDF3") },
+})
+
 const code = new CodeRenderable(renderer, {
   id: "streaming-code",
   content: "",
@@ -147,6 +157,8 @@ const code = new CodeRenderable(renderer, {
 // Later, append content
 code.content += "const x = 1\n"
 code.content += "const y = 2\n"
+
+renderer.root.add(code)
 ```
 
 Streaming mode optimizes highlighting for incremental updates.
@@ -155,7 +167,21 @@ Streaming mode optimizes highlighting for incremental updates.
 
 Enable text selection for copy operations:
 
-```typescript
+```ts example
+import { CodeRenderable, SyntaxStyle, RGBA, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+const syntaxStyle = SyntaxStyle.fromStyles({
+  keyword: { fg: RGBA.fromHex("#FF7B72"), bold: true },
+  string: { fg: RGBA.fromHex("#A5D6FF") },
+  default: { fg: RGBA.fromHex("#E6EDF3") },
+})
+
+const sourceCode = `const greeting = "Hello, OpenTUI!"
+console.log(greeting)
+`
+
 const code = new CodeRenderable(renderer, {
   id: "code",
   content: sourceCode,
@@ -165,13 +191,25 @@ const code = new CodeRenderable(renderer, {
   selectionBg: "#264F78",
   selectionFg: "#FFFFFF",
 })
+
+renderer.root.add(code)
 ```
 
 ## Concealment
 
 The `conceal` option controls whether certain syntax elements (like markdown formatting characters) are hidden:
 
-```typescript
+```ts example
+import { CodeRenderable, SyntaxStyle, RGBA, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+const syntaxStyle = SyntaxStyle.fromStyles({
+  keyword: { fg: RGBA.fromHex("#FF7B72"), bold: true },
+  string: { fg: RGBA.fromHex("#A5D6FF") },
+  default: { fg: RGBA.fromHex("#E6EDF3") },
+})
+
 const code = new CodeRenderable(renderer, {
   id: "markdown",
   content: "# Heading\n**bold** text",
@@ -179,14 +217,29 @@ const code = new CodeRenderable(renderer, {
   syntaxStyle,
   conceal: true, // Hide formatting characters
 })
+
+renderer.root.add(code)
 ```
 
 ## With line numbers
 
 Use `LineNumberRenderable` to add line numbers:
 
-```typescript
-import { CodeRenderable, LineNumberRenderable, ScrollBoxRenderable } from "@opentui/core"
+```ts example
+import { CodeRenderable, LineNumberRenderable, ScrollBoxRenderable, SyntaxStyle, RGBA, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+const syntaxStyle = SyntaxStyle.fromStyles({
+  keyword: { fg: RGBA.fromHex("#FF7B72"), bold: true },
+  string: { fg: RGBA.fromHex("#A5D6FF") },
+  default: { fg: RGBA.fromHex("#E6EDF3") },
+})
+
+const sourceCode = `function greet(name: string) {
+  return \`Hello, \${name}!\`
+}
+`
 
 const code = new CodeRenderable(renderer, {
   id: "code",
@@ -213,6 +266,7 @@ const scrollbox = new ScrollBoxRenderable(renderer, {
   height: 20,
 })
 scrollbox.add(lineNumbers)
+renderer.root.add(scrollbox)
 ```
 
 ## Properties

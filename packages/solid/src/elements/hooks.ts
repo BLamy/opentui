@@ -7,9 +7,12 @@ import {
   type KeyEvent,
   type TimelineOptions,
 } from "@opentui/core"
+import type { BrowserRenderer } from "@opentui/core/browser"
 import { createContext, createSignal, onCleanup, onMount, useContext } from "solid-js"
 
-export const RendererContext = createContext<CliRenderer>()
+export type SolidRenderer = CliRenderer | BrowserRenderer
+
+export const RendererContext = createContext<SolidRenderer>()
 
 export const useRenderer = () => {
   const renderer = useContext(RendererContext)

@@ -1,5 +1,5 @@
 import { defineStruct, defineEnum } from "bun-ffi-structs"
-import { ptr, toArrayBuffer, type Pointer } from "bun:ffi"
+import { ptr, toArrayBuffer, type Pointer } from "./lib/ffi-runtime.js"
 import { RGBA } from "./lib/RGBA.js"
 
 const rgbaPackTransform = (rgba?: RGBA) => (rgba ? ptr(rgba.buffer) : null)

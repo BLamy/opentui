@@ -1,4 +1,4 @@
-import { type KeyEvent } from "../lib/index.js"
+import type { KeyEvent } from "../lib/KeyHandler.js"
 import { getObjectsInViewport } from "../lib/objects-in-viewport.js"
 import { LinearScrollAccel, MacOSScrollAccel, type ScrollAcceleration } from "../lib/scroll-acceleration.js"
 import type { Renderable, RenderableOptions } from "../Renderable.js"

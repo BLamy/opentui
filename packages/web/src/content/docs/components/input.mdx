@@ -12,7 +12,7 @@ Text input field with cursor, placeholder text, and focus states. Focus the inpu
 
 ### Renderable api
 
-```typescript
+```ts example
 import { InputRenderable, InputRenderableEvents, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -33,7 +33,7 @@ renderer.root.add(input)
 
 ### Construct api
 
-```typescript
+```ts example
 import { Input, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -51,7 +51,11 @@ renderer.root.add(input)
 
 The input changes appearance when focused:
 
-```typescript
+```ts example
+import { InputRenderable, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
 const input = new InputRenderable(renderer, {
   id: "styled-input",
   width: 30,
@@ -61,6 +65,9 @@ const input = new InputRenderable(renderer, {
   textColor: "#FFFFFF",
   cursorColor: "#00FF00",
 })
+
+input.focus()
+renderer.root.add(input)
 ```
 
 ## Events
@@ -69,44 +76,107 @@ const input = new InputRenderable(renderer, {
 
 Fires on every keystroke as the value changes:
 
-```typescript
-import { InputRenderableEvents } from "@opentui/core"
+```ts example
+import { InputRenderable, InputRenderableEvents, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+const input = new InputRenderable(renderer, {
+  id: "live-input",
+  width: 28,
+  placeholder: "Start typing...",
+})
 
 input.on(InputRenderableEvents.INPUT, (value: string) => {
   console.log("Current value:", value)
 })
+
+input.focus()
+renderer.root.add(input)
 ```
 
 ### Change event
 
 Fires when the input loses focus (blur) or when you press Enter, but only if the value changed since focus:
 
-```typescript
+```ts example
+import { InputRenderable, InputRenderableEvents, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+const input = new InputRenderable(renderer, {
+  id: "commit-input",
+  width: 28,
+  placeholder: "Blur or press Enter to commit",
+})
+
 input.on(InputRenderableEvents.CHANGE, (value: string) => {
   console.log("Value committed:", value)
 })
+
+input.focus()
+renderer.root.add(input)
 ```
 
 ### Enter event
 
 Fires when the user presses Enter/Return:
 
-```typescript
+```ts example
+import { InputRenderable, InputRenderableEvents, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+const input = new InputRenderable(renderer, {
+  id: "submit-input",
+  width: 28,
+  placeholder: "Press Enter to submit",
+})
+
 input.on(InputRenderableEvents.ENTER, (value: string) => {
   console.log("Submitted value:", value)
 })
+
+input.focus()
+renderer.root.add(input)
 ```
 
 ### Getting the current value
 
-```typescript
+```ts example
+import { InputRenderable, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+const input = new InputRenderable(renderer, {
+  id: "value-input",
+  width: 25,
+  value: "Alice",
+})
+
 const currentValue = input.value
+console.log("Current value:", currentValue)
+
+renderer.root.add(input)
 ```
 
 ### Setting the value
 
-```typescript
+```ts example
+import { InputRenderable, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+const input = new InputRenderable(renderer, {
+  id: "prefilled-input",
+  width: 25,
+  placeholder: "Will be replaced immediately",
+})
+
 input.value = "New value"
+
+input.focus()
+renderer.root.add(input)
 ```
 
 ## Properties
@@ -125,7 +195,7 @@ input.value = "New value"
 
 ## Example: Login form
 
-```typescript
+```ts example
 import { Box, Text, Input, delegate, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -182,7 +252,35 @@ renderer.root.add(form)
 
 Add tab navigation between inputs:
 
-```typescript
+```ts example
+import { Box, Input, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+const usernameInput = Input({
+  id: "username-input",
+  placeholder: "Username",
+  width: 20,
+})
+
+const passwordInput = Input({
+  id: "password-input",
+  placeholder: "Password",
+  width: 20,
+})
+
+const form = Box(
+  {
+    flexDirection: "column",
+    gap: 1,
+    width: 24,
+    borderStyle: "rounded",
+    padding: 1,
+  },
+  usernameInput,
+  passwordInput,
+)
+
 const inputs = [usernameInput, passwordInput]
 let focusIndex = 0
 
@@ -192,4 +290,7 @@ renderer.keyInput.on("keypress", (key) => {
     inputs[focusIndex].focus()
   }
 })
+
+inputs[focusIndex].focus()
+renderer.root.add(form)
 ```

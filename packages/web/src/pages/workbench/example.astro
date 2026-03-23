@@ -1,0 +1,61 @@
+---
+import Base from "../../layouts/Base.astro"
+---
+
+<Base title="OpenTUI Example Preview" description="Live preview for OpenTUI documentation examples.">
+  <main class="doc-preview-page">
+    <section class="doc-preview-page__surface" data-preview-root data-wasm-url="/opentui/opentui.wasm">
+      <div class="doc-preview-page__terminal" data-preview-terminal></div>
+    </section>
+  </main>
+
+  <script>
+    import "../../scripts/example-preview.ts"
+  </script>
+</Base>
+
+<style>
+  :global(html),
+  :global(body) {
+    height: 100%;
+    overflow: hidden;
+    background: var(--doc-example-code-bg);
+  }
+
+  .doc-preview-page {
+    height: 100%;
+    min-height: 100%;
+    background: var(--doc-example-code-bg);
+  }
+
+  .doc-preview-page__surface {
+    display: flex;
+    position: relative;
+    height: 100%;
+    min-height: 100%;
+    background: var(--doc-example-code-bg);
+    overflow: hidden;
+  }
+
+  .doc-preview-page__surface :global([data-preview-status]) {
+    display: none !important;
+  }
+
+  .doc-preview-page__terminal {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    background: var(--doc-example-code-bg);
+    overflow: hidden;
+  }
+
+  .doc-preview-page__terminal :global(.xterm) {
+    height: 100%;
+  }
+
+  .doc-preview-page__terminal :global(.xterm-viewport) {
+    overflow-y: auto !important;
+    scrollbar-width: thin;
+    scrollbar-color: var(--doc-example-terminal-scrollbar) transparent;
+  }
+</style>

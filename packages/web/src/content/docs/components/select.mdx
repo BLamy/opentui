@@ -12,7 +12,7 @@ A vertical list for choosing from multiple options. Focus the select to enable k
 
 ### Renderable API
 
-```typescript
+```ts example
 import { SelectRenderable, SelectRenderableEvents, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -39,7 +39,7 @@ renderer.root.add(menu)
 
 ### Construct API
 
-```typescript
+```ts example
 import { Select, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -75,23 +75,58 @@ When focused, the select responds to these keys:
 
 Fires when the user presses Enter on an option:
 
-```typescript
-import { SelectRenderableEvents } from "@opentui/core"
+```ts example
+import { SelectRenderable, SelectRenderableEvents, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+const menu = new SelectRenderable(renderer, {
+  id: "selection-menu",
+  width: 32,
+  height: 8,
+  options: [
+    { name: "New File", description: "Create a new file" },
+    { name: "Open File", description: "Browse an existing file" },
+    { name: "Save", description: "Write the current buffer to disk" },
+    { name: "Exit", description: "Quit the application" },
+  ],
+})
 
 menu.on(SelectRenderableEvents.ITEM_SELECTED, (index: number, option: SelectOption) => {
   console.log(`Selected index ${index}: ${option.name}`)
 })
+
+menu.focus()
+renderer.root.add(menu)
 ```
 
 ### Selection changed
 
 Fires when the highlighted item changes:
 
-```typescript
+```ts example
+import { SelectRenderable, SelectRenderableEvents, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+const menu = new SelectRenderable(renderer, {
+  id: "highlight-menu",
+  width: 32,
+  height: 8,
+  options: [
+    { name: "Preview", description: "Inspect the current selection" },
+    { name: "Rename", description: "Update the item label" },
+    { name: "Share", description: "Send the item to a teammate" },
+  ],
+})
+
 menu.on(SelectRenderableEvents.SELECTION_CHANGED, (index: number, option: SelectOption) => {
   console.log(`Highlighted: ${option.name}`)
   // Update a preview pane, for example
 })
+
+menu.focus()
+renderer.root.add(menu)
 ```
 
 ## Option structure
@@ -106,18 +141,29 @@ interface SelectOption {
 
 ## Styling
 
-```typescript
+```ts example
+import { SelectRenderable, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
 const styledMenu = new SelectRenderable(renderer, {
   id: "styled-menu",
   width: 40,
   height: 10,
-  options: [...],
+  options: [
+    { name: "Dashboard", description: "Open the main overview" },
+    { name: "Reports", description: "View generated reports" },
+    { name: "Settings", description: "Adjust application preferences" },
+  ],
   backgroundColor: "#1a1a1a",
   selectedBackgroundColor: "#333366",
   selectedTextColor: "#FFFFFF",
   textColor: "#AAAAAA",
   descriptionColor: "#666666",
 })
+
+styledMenu.focus()
+renderer.root.add(styledMenu)
 ```
 
 ## Properties
@@ -144,7 +190,7 @@ const styledMenu = new SelectRenderable(renderer, {
 
 ## Example: file menu
 
-```typescript
+```ts example
 import { Box, Select, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -176,12 +222,27 @@ renderer.root.add(menuPanel)
 
 ## Programmatic control
 
-```typescript
-// Get current selection index
+```ts example
+import { Select, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+const menu = Select({
+  width: 30,
+  height: 8,
+  options: [
+    { name: "Overview", description: "Show the home dashboard" },
+    { name: "Issues", description: "Open the issue queue" },
+    { name: "Deployments", description: "Review recent deploys" },
+  ],
+})
+
 const currentIndex = menu.getSelectedIndex()
+console.log("Current selection:", currentIndex)
 
 // Get currently selected option
 const option = menu.getSelectedOption()
+console.log("Current option:", option)
 
 // Set selection programmatically
 menu.setSelectedIndex(2)
@@ -202,4 +263,7 @@ menu.options = [
 menu.showDescription = false
 menu.showScrollIndicator = true
 menu.wrapSelection = true
+
+menu.focus()
+renderer.root.add(menu)
 ```

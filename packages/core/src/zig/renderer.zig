@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
 const ansi = @import("ansi.zig");
 const buf = @import("buffer.zig");
@@ -18,6 +19,32 @@ const STAT_SAMPLE_CAPACITY = 30;
 
 const COLOR_EPSILON_DEFAULT: f32 = 0.00001;
 const OUTPUT_BUFFER_SIZE = 1024 * 1024 * 2; // 2MB
+const IS_WASM_FREESTANDING = (builtin.cpu.arch == .wasm32 or builtin.cpu.arch == .wasm64) and builtin.os.tag == .freestanding;
+
+fn currentMicroTimestamp() i64 {
+    if (IS_WASM_FREESTANDING) return 0;
+    return std.time.microTimestamp();
+}
+
+fn currentTimestamp() i64 {
+    if (IS_WASM_FREESTANDING) return 0;
+    return std.time.timestamp();
+}
+
+const NoopMutex = struct {
+    pub fn lock(_: *NoopMutex) void {}
+    pub fn unlock(_: *NoopMutex) void {}
+};
+
+const ThreadMutex = if (IS_WASM_FREESTANDING) NoopMutex else std.Thread.Mutex;
+
+const NoopCondition = struct {
+    pub fn wait(_: *NoopCondition, _: anytype) void {}
+    pub fn signal(_: *NoopCondition) void {}
+};
+
+const ThreadCondition = if (IS_WASM_FREESTANDING) NoopCondition else std.Thread.Condition;
+const ThreadHandle = if (IS_WASM_FREESTANDING) void else std.Thread;
 
 pub const RendererError = error{
     OutOfMemory,
@@ -79,7 +106,7 @@ pub const CliRenderer = struct {
     },
     lastRenderTime: i64,
     allocator: Allocator,
-    renderThread: ?std.Thread = null,
+    renderThread: ?ThreadHandle = null,
     stdoutBuffer: [4096]u8,
     writeOutBuf: [1024]u8 = undefined,
     debugOverlay: struct {
@@ -91,13 +118,14 @@ pub const CliRenderer = struct {
     },
     // Threading
     useThread: bool = false,
-    renderMutex: std.Thread.Mutex = .{},
-    renderCondition: std.Thread.Condition = .{},
+    renderMutex: ThreadMutex = .{},
+    renderCondition: ThreadCondition = .{},
     renderRequested: bool = false,
     shouldTerminate: bool = false,
     renderInProgress: bool = false,
     currentOutputBuffer: []u8 = &[_]u8{},
     currentOutputLen: usize = 0,
+    pendingOutput: std.ArrayListUnmanaged(u8) = .{},
 
     // Hit grid for mouse event dispatch.
     //
@@ -250,7 +278,7 @@ pub const CliRenderer = struct {
                 .cellsUpdated = cellsUpdated,
                 .frameCallbackTime = frameCallbackTimes,
             },
-            .lastRenderTime = std.time.microTimestamp(),
+            .lastRenderTime = currentMicroTimestamp(),
             .allocator = allocator,
             .stdoutBuffer = undefined,
             .currentHitGrid = currentHitGrid,
@@ -279,8 +307,10 @@ pub const CliRenderer = struct {
         self.renderCondition.signal();
         self.renderMutex.unlock();
 
-        if (self.renderThread) |thread| {
-            thread.join();
+        if (!IS_WASM_FREESTANDING) {
+            if (self.renderThread) |thread| {
+                thread.join();
+            }
         }
 
         self.performShutdownSequence();
@@ -301,6 +331,7 @@ pub const CliRenderer = struct {
         self.allocator.free(self.currentHitGrid);
         self.allocator.free(self.nextHitGrid);
         self.hitScissorStack.deinit(self.allocator);
+        self.pendingOutput.deinit(self.allocator);
 
         self.allocator.destroy(self);
     }
@@ -309,20 +340,27 @@ pub const CliRenderer = struct {
         self.useAlternateScreen = useAlternateScreen;
         self.terminalSetup = true;
 
-        var stdoutWriter = std.fs.File.stdout().writer(&self.stdoutBuffer);
-        const writer = &stdoutWriter.interface;
-
-        self.terminal.queryTerminalSend(writer) catch {
+        var setup_buffer: [4096]u8 = undefined;
+        var stream = std.io.fixedBufferStream(&setup_buffer);
+        self.terminal.queryTerminalSend(stream.writer()) catch {
             logger.warn("Failed to query terminal capabilities", .{});
         };
-        writer.flush() catch {};
+        self.writeOut(stream.getWritten());
 
         self.setupTerminalWithoutDetection(useAlternateScreen);
     }
 
+    pub fn setupTerminalForBrowser(self: *CliRenderer, useAlternateScreen: bool) void {
+        self.useAlternateScreen = useAlternateScreen;
+        self.terminalSetup = true;
+        self.terminal.seedBrowserCapabilities();
+        self.setupTerminalWithoutDetection(useAlternateScreen);
+    }
+
     fn setupTerminalWithoutDetection(self: *CliRenderer, useAlternateScreen: bool) void {
-        var stdoutWriter = std.fs.File.stdout().writer(&self.stdoutBuffer);
-        const writer = &stdoutWriter.interface;
+        var setup_buffer: [4096]u8 = undefined;
+        var stream = std.io.fixedBufferStream(&setup_buffer);
+        const writer = stream.writer();
 
         writer.writeAll(ansi.ANSI.saveCursorState) catch {};
 
@@ -335,8 +373,7 @@ pub const CliRenderer = struct {
         self.terminal.setCursorPosition(1, 1, false);
         const useKitty = self.terminal.opts.kitty_keyboard_flags > 0;
         self.terminal.enableDetectedFeatures(writer, useKitty) catch {};
-
-        writer.flush() catch {};
+        self.writeOut(stream.getWritten());
     }
 
     pub fn suspendRenderer(self: *CliRenderer) void {
@@ -352,17 +389,16 @@ pub const CliRenderer = struct {
     pub fn performShutdownSequence(self: *CliRenderer) void {
         if (!self.terminalSetup) return;
 
-        var stdoutWriter = std.fs.File.stdout().writer(&self.stdoutBuffer);
-        const direct = &stdoutWriter.interface;
-        self.terminal.resetState(direct) catch {
+        var shutdown_buffer: [4096]u8 = undefined;
+        var stream = std.io.fixedBufferStream(&shutdown_buffer);
+        const writer = stream.writer();
+        self.terminal.resetState(writer) catch {
             logger.warn("Failed to reset terminal state", .{});
         };
 
         if (self.useAlternateScreen) {
-            direct.flush() catch {};
         } else if (self.renderOffset == 0) {
-            direct.writeAll("\x1b[H\x1b[J") catch {};
-            direct.flush() catch {};
+            writer.writeAll("\x1b[H\x1b[J") catch {};
         } else if (self.renderOffset > 0) {
             // Currently still handled in typescript
             // const consoleEndLine = self.height - self.renderOffset;
@@ -372,16 +408,16 @@ pub const CliRenderer = struct {
         // NOTE: This messes up state after shutdown, but might be necessary for windows?
         // direct.writeAll(ansi.ANSI.restoreCursorState) catch {};
 
-        direct.writeAll(ansi.ANSI.resetCursorColorFallback) catch {};
-        direct.writeAll(ansi.ANSI.resetCursorColor) catch {};
-        direct.writeAll(ansi.ANSI.defaultCursorStyle) catch {};
+        writer.writeAll(ansi.ANSI.resetCursorColorFallback) catch {};
+        writer.writeAll(ansi.ANSI.resetCursorColor) catch {};
+        writer.writeAll(ansi.ANSI.defaultCursorStyle) catch {};
         // Workaround for Ghostty not showing the cursor after shutdown for some reason
-        direct.writeAll(ansi.ANSI.showCursor) catch {};
-        direct.flush() catch {};
-        std.Thread.sleep(10 * std.time.ns_per_ms);
-        direct.writeAll(ansi.ANSI.showCursor) catch {};
-        direct.flush() catch {};
-        std.Thread.sleep(10 * std.time.ns_per_ms);
+        writer.writeAll(ansi.ANSI.showCursor) catch {};
+        writer.writeAll(ansi.ANSI.showCursor) catch {};
+        self.writeOut(stream.getWritten());
+        if (!IS_WASM_FREESTANDING) {
+            std.Thread.sleep(10 * std.time.ns_per_ms);
+        }
     }
 
     fn addStatSample(self: *CliRenderer, comptime T: type, samples: *std.ArrayListUnmanaged(T), value: T) void {
@@ -410,6 +446,11 @@ pub const CliRenderer = struct {
     }
 
     pub fn setUseThread(self: *CliRenderer, useThread: bool) void {
+        if (IS_WASM_FREESTANDING) {
+            self.useThread = false;
+            return;
+        }
+
         if (self.useThread == useThread) return;
 
         if (useThread) {
@@ -523,9 +564,11 @@ pub const CliRenderer = struct {
             const outputData = self.currentOutputBuffer;
             const outputLen = self.currentOutputLen;
 
-            const writeStart = std.time.microTimestamp();
+            const writeStart = currentMicroTimestamp();
 
-            if (outputLen > 0 and !self.testing) {
+            if (IS_WASM_FREESTANDING) {
+                self.appendPendingOutput(outputData[0..outputLen]);
+            } else if (outputLen > 0 and !self.testing) {
                 var stdoutWriter = std.fs.File.stdout().writer(&self.stdoutBuffer);
                 const w = &stdoutWriter.interface;
                 w.writeAll(outputData[0..outputLen]) catch {};
@@ -533,7 +576,7 @@ pub const CliRenderer = struct {
             }
 
             // Signal that rendering is complete
-            self.renderStats.stdoutWriteTime = @as(f64, @floatFromInt(std.time.microTimestamp() - writeStart));
+            self.renderStats.stdoutWriteTime = @as(f64, @floatFromInt(currentMicroTimestamp() - writeStart));
             self.renderInProgress = false;
             self.renderCondition.signal();
             self.renderMutex.unlock();
@@ -542,7 +585,7 @@ pub const CliRenderer = struct {
 
     // Render once with current state
     pub fn render(self: *CliRenderer, force: bool) void {
-        const now = std.time.microTimestamp();
+        const now = currentMicroTimestamp();
         const deltaTimeMs = @as(f64, @floatFromInt(now - self.lastRenderTime));
         const deltaTime = deltaTimeMs / 1000.0; // Convert to seconds
 
@@ -572,14 +615,16 @@ pub const CliRenderer = struct {
             self.renderCondition.signal();
             self.renderMutex.unlock();
         } else {
-            const writeStart = std.time.microTimestamp();
-            if (!self.testing) {
+            const writeStart = currentMicroTimestamp();
+            if (IS_WASM_FREESTANDING) {
+                self.appendPendingOutput(outputBuffer[0..outputBufferLen]);
+            } else if (!self.testing) {
                 var stdoutWriter = std.fs.File.stdout().writer(&self.stdoutBuffer);
                 const w = &stdoutWriter.interface;
                 w.writeAll(outputBuffer[0..outputBufferLen]) catch {};
                 w.flush() catch {};
             }
-            self.renderStats.stdoutWriteTime = @as(f64, @floatFromInt(std.time.microTimestamp() - writeStart));
+            self.renderStats.stdoutWriteTime = @as(f64, @floatFromInt(currentMicroTimestamp() - writeStart));
         }
 
         self.renderStats.lastFrameTime = deltaTime * 1000.0;
@@ -607,7 +652,7 @@ pub const CliRenderer = struct {
     }
 
     fn prepareRenderFrame(self: *CliRenderer, force: bool) void {
-        const renderStartTime = std.time.microTimestamp();
+        const renderStartTime = currentMicroTimestamp();
         var cellsUpdated: u32 = 0;
 
         if (activeBuffer == .A) {
@@ -832,7 +877,7 @@ pub const CliRenderer = struct {
 
         writer.writeAll(ansi.ANSI.syncReset) catch {};
 
-        const renderEndTime = std.time.microTimestamp();
+        const renderEndTime = currentMicroTimestamp();
         const renderTime = @as(f64, @floatFromInt(renderEndTime - renderStartTime));
 
         self.renderStats.cellsUpdated = cellsUpdated;
@@ -865,6 +910,10 @@ pub const CliRenderer = struct {
     pub fn writeOut(self: *CliRenderer, data: []const u8) void {
         if (data.len == 0) return;
         if (self.testing) return;
+        if (IS_WASM_FREESTANDING) {
+            self.appendPendingOutput(data);
+            return;
+        }
 
         if (self.useThread) {
             self.renderMutex.lock();
@@ -882,6 +931,12 @@ pub const CliRenderer = struct {
 
     pub fn writeOutMultiple(self: *CliRenderer, data_slices: []const []const u8) void {
         if (self.testing) return;
+        if (IS_WASM_FREESTANDING) {
+            for (data_slices) |slice| {
+                self.appendPendingOutput(slice);
+            }
+            return;
+        }
 
         if (self.useThread) {
             self.renderMutex.lock();
@@ -904,6 +959,34 @@ pub const CliRenderer = struct {
             w.writeAll(slice) catch {};
         }
         w.flush() catch {};
+    }
+
+    fn appendPendingOutput(self: *CliRenderer, data: []const u8) void {
+        if (data.len == 0 or self.testing) return;
+        self.pendingOutput.appendSlice(self.allocator, data) catch |err| {
+            logger.warn("Failed to append pending output: {}", .{err});
+        };
+    }
+
+    pub fn getPendingOutputLen(self: *CliRenderer) usize {
+        return self.pendingOutput.items.len;
+    }
+
+    pub fn drainPendingOutput(self: *CliRenderer, out: []u8) usize {
+        const pending = self.pendingOutput.items;
+        const copy_len = @min(out.len, pending.len);
+        if (copy_len == 0) return 0;
+
+        @memcpy(out[0..copy_len], pending[0..copy_len]);
+
+        if (copy_len == pending.len) {
+            self.pendingOutput.clearRetainingCapacity();
+            return copy_len;
+        }
+
+        std.mem.copyForwards(u8, self.pendingOutput.items[0 .. pending.len - copy_len], pending[copy_len..]);
+        self.pendingOutput.items.len = pending.len - copy_len;
+        return copy_len;
     }
 
     /// Write a renderable's bounds to nextHitGrid for the upcoming frame.
@@ -1071,7 +1154,9 @@ pub const CliRenderer = struct {
     }
 
     pub fn dumpHitGrid(self: *CliRenderer) void {
-        const timestamp = std.time.timestamp();
+        if (IS_WASM_FREESTANDING) return;
+
+        const timestamp = currentTimestamp();
         var filename_buf: [64]u8 = undefined;
         const filename = std.fmt.bufPrint(&filename_buf, "hitgrid_{d}.txt", .{timestamp}) catch return;
 
@@ -1096,6 +1181,8 @@ pub const CliRenderer = struct {
     }
 
     fn dumpSingleBuffer(self: *CliRenderer, buffer: *OptimizedBuffer, buffer_name: []const u8, timestamp: i64) void {
+        if (IS_WASM_FREESTANDING) return;
+
         std.fs.cwd().makeDir("buffer_dump") catch |err| switch (err) {
             error.PathAlreadyExists => {},
             else => return,
@@ -1147,6 +1234,8 @@ pub const CliRenderer = struct {
     }
 
     pub fn dumpStdoutBuffer(self: *CliRenderer, timestamp: i64) void {
+        if (IS_WASM_FREESTANDING) return;
+
         _ = self;
         std.fs.cwd().makeDir("buffer_dump") catch |err| switch (err) {
             error.PathAlreadyExists => {},

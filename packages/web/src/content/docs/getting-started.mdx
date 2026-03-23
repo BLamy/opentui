@@ -4,9 +4,17 @@ description: Install OpenTUI and create your first terminal UI
 order: 1
 ---
 
+import BrowserDemo from "../../components/BrowserDemo.astro"
+
 # Getting started
 
 OpenTUI is a native terminal UI core written in Zig with TypeScript bindings. The native core exposes a C ABI and can be used from any language. OpenTUI powers OpenCode in production today and will also power terminal.shop. It is an extensible core with a focus on correctness, stability, and high performance. It provides a component-based architecture with flexible layout capabilities, allowing you to create complex terminal applications.
+
+## Live browser demo
+
+If you want to try OpenTUI before installing anything, start with the browser workbench below. It runs the Zig renderer as WebAssembly through `@opentui/core/browser`, so the docs can show a real interactive OpenTUI surface directly in your browser.
+
+<BrowserDemo />
 
 ## Installation
 
@@ -84,3 +92,4 @@ renderer.root.add(
 
 - [React](/docs/bindings/react)
 - [Solid.js](/docs/bindings/solid)
+- [Browser workbench](/workbench)

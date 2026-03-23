@@ -309,7 +309,7 @@ pub fn enableDetectedFeatures(self: *Terminal, tty: anytype, use_kitty_keyboard:
         try self.setFocusTracking(tty, true);
     }
 
-    if (!self.state.color_scheme_updates) {
+    if (self.caps.color_scheme_updates and !self.state.color_scheme_updates) {
         try self.setColorSchemeUpdates(tty, true);
         try tty.writeAll(ansi.ANSI.colorSchemeRequest);
     }
@@ -333,6 +333,10 @@ fn checkEnvironmentOverrides(self: *Terminal) void {
 
     var env_map_storage: ?std.process.EnvMap = null;
     const env_map: *const std.process.EnvMap = self.opts.env_map orelse blk: {
+        if (builtin.os.tag == .freestanding) {
+            return;
+        }
+
         env_map_storage = std.process.getEnvMap(std.heap.page_allocator) catch |err| {
             logger.err("Failed to get environment map: {}", .{err});
             return;
@@ -483,6 +487,20 @@ fn checkEnvironmentOverrides(self: *Terminal) void {
             }
         }
     }
+}
+
+pub fn seedBrowserCapabilities(self: *Terminal) void {
+    self.caps.rgb = true;
+    self.caps.unicode = .unicode;
+    self.caps.bracketed_paste = true;
+    self.caps.focus_tracking = true;
+    self.caps.sync = true;
+    self.caps.hyperlinks = true;
+    self.caps.explicit_cursor_positioning = true;
+
+    const name = "xterm.js";
+    @memcpy(self.term_info.name[0..name.len], name);
+    self.term_info.name_len = name.len;
 }
 
 // TODO: Allow pixel mouse mode to be enabled,
