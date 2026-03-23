@@ -3,6 +3,7 @@ import { afterEach, expect, test } from "bun:test"
 import { destroySingleton, hasSingleton } from "../../core/src/lib/singleton.js"
 import { getTreeSitterClient } from "../../core/src/lib/tree-sitter/index.js"
 import { createTestRenderer } from "../../core/src/testing/test-renderer.js"
+import { ensureBrowserProcessShim } from "../src/scripts/browser-process"
 import * as docPreviewRuntime from "../src/scripts/doc-preview-runtime"
 import { compileExample } from "../src/scripts/example-preview-compiler"
 
@@ -24,17 +25,14 @@ async function runActualPreviewExample(code: string): Promise<number> {
   const { renderer } = await createTestRenderer({ width: 80, height: 24 })
   const originalProcess = globalThis.process
   const originalDocument = (globalThis as Record<string, unknown>).document
-  const browserProcess = {
+  ;(globalThis as Record<string, unknown>).process = {
     cwd: () => "/",
     env: undefined,
     exit: () => {
       throw new Error("process.exit() is not available in the docs example test runtime.")
     },
-    nextTick: originalProcess.nextTick.bind(originalProcess),
-    off: () => browserProcess,
-    on: () => browserProcess,
-    removeListener: () => browserProcess,
   }
+  const browserProcess = ensureBrowserProcessShim()
   const runtimeModule = {
     ...docPreviewRuntime,
     createCliRenderer: async () => renderer,
@@ -51,7 +49,6 @@ async function runActualPreviewExample(code: string): Promise<number> {
   }
 
   ;(globalThis as Record<string, unknown>).document = {}
-  globalThis.process = browserProcess as typeof process
 
   try {
     const execute = new Function("runtime", `return (async () => { ${compiled} })()`)
@@ -108,6 +105,33 @@ test("browser-like preview runtime executes MarkdownRenderable examples", async 
     })
 
     renderer.root.add(markdown)
+  `)
+
+  expect(childCount).toBeGreaterThan(0)
+})
+
+test("browser-like preview runtime shims process.nextTick for ScrollBoxRenderable examples", async () => {
+  const childCount = await runActualPreviewExample(`
+    import { ScrollBoxRenderable, BoxRenderable, createCliRenderer } from "@opentui/core"
+
+    const renderer = await createCliRenderer()
+    const scrollbox = new ScrollBoxRenderable(renderer, {
+      id: "scrollbox",
+      width: 40,
+      height: 20,
+    })
+
+    for (let i = 0; i < 8; i++) {
+      scrollbox.add(
+        new BoxRenderable(renderer, {
+          id: \`item-\${i}\`,
+          width: "100%",
+          height: 2,
+        }),
+      )
+    }
+
+    renderer.root.add(scrollbox)
   `)
 
   expect(childCount).toBeGreaterThan(0)

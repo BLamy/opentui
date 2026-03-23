@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { parsePatch } from "diff"
 
+import { ensureBrowserProcessShim } from "../src/scripts/browser-process"
 import * as docPreviewRuntime from "../src/scripts/doc-preview-runtime"
 import { compileExample } from "../src/scripts/example-preview-compiler"
 
@@ -15,6 +16,18 @@ interface DocExample {
   index: number
   language: string
   summary: string
+}
+
+interface FakeRenderer {
+  keyInput: {
+    on: (_eventName: string, _handler: (...args: unknown[]) => void) => () => void
+  }
+  themeMode: "dark" | "light" | null
+  root: FakeRenderable
+}
+
+interface ExampleRunResult {
+  renderers: FakeRenderer[]
 }
 
 let fakeRenderableId = 0
@@ -133,13 +146,14 @@ class FakeSyntaxStyle {
   }
 }
 
-function createFakeRenderer(): Record<string, unknown> {
+function createFakeRenderer(themeMode: "dark" | "light" | null = "dark"): FakeRenderer {
   return {
     keyInput: {
       on:
         (_eventName: string, _handler: (...args: unknown[]) => void): (() => void) =>
         () => {},
     },
+    themeMode,
     root: new FakeRenderable(undefined, { id: "root" }),
   }
 }
@@ -205,9 +219,18 @@ function createPreviewModule(): Record<string, unknown> {
     }
 
     if (
-      ["ASCIIFont", "Box", "Code", "FrameBuffer", "Input", "ScrollBox", "Select", "TabSelect", "Text", "Textarea"].includes(
-        exportName,
-      )
+      [
+        "ASCIIFont",
+        "Box",
+        "Code",
+        "FrameBuffer",
+        "Input",
+        "ScrollBox",
+        "Select",
+        "TabSelect",
+        "Text",
+        "Textarea",
+      ].includes(exportName)
     ) {
       previewModule[exportName] = createConstruct(exportName)
       continue
@@ -220,15 +243,16 @@ function createPreviewModule(): Record<string, unknown> {
   return previewModule
 }
 
-function createPreviewScope(modules: Record<string, Record<string, unknown>>): Record<string, unknown> {
+function createPreviewScope(
+  modules: Record<string, Record<string, unknown>>,
+  browserProcess: ReturnType<typeof ensureBrowserProcessShim>,
+): Record<string, unknown> {
+  browserProcess.exit = () => {
+    throw new Error("process.exit() is not available in the docs example test runtime.")
+  }
+
   return {
-    process: {
-      cwd: () => "/",
-      env: {},
-      exit: () => {
-        throw new Error("process.exit() is not available in the docs example test runtime.")
-      },
-    },
+    process: browserProcess,
     ...modules["@opentui/core"],
     ...modules["@opentui/core/browser"],
   }
@@ -274,24 +298,56 @@ function getDocExamples(fileName: string): DocExample[] {
 }
 
 function getInlineDiffLiterals(code: string): string[] {
-  return Array.from(code.matchAll(/\bdiff:\s*`(?<diff>[\s\S]*?)`/g), (match) => match.groups?.diff ?? "").filter(Boolean)
+  return Array.from(code.matchAll(/\bdiff:\s*`(?<diff>[\s\S]*?)`/g), (match) => match.groups?.diff ?? "").filter(
+    Boolean,
+  )
 }
 
-async function runCompiledExample(compiled: string): Promise<void> {
-  const previewModule = createPreviewModule()
-  const runtime = {
-    modules: {
-      "@opentui/core": previewModule,
-      "@opentui/core/browser": previewModule,
-    },
-    scope: createPreviewScope({
-      "@opentui/core": previewModule,
-      "@opentui/core/browser": previewModule,
-    }),
+async function runCompiledExample(
+  compiled: string,
+  themeMode: "dark" | "light" | null = "dark",
+): Promise<ExampleRunResult> {
+  const originalProcess = globalThis.process
+  const renderers: FakeRenderer[] = []
+
+  function createTrackedRenderer(): FakeRenderer {
+    const renderer = createFakeRenderer(themeMode)
+    renderers.push(renderer)
+    return renderer
   }
 
-  const execute = new Function("runtime", `return (async () => { ${compiled} })()`)
-  await execute(runtime)
+  try {
+    ;(globalThis as Record<string, unknown>).process = {
+      cwd: () => "/",
+      env: {},
+      exit: () => {
+        throw new Error("process.exit() is not available in the docs example test runtime.")
+      },
+    }
+
+    const browserProcess = ensureBrowserProcessShim()
+    const previewModule = createPreviewModule()
+    previewModule.createCliRenderer = async () => createTrackedRenderer()
+    const runtime = {
+      modules: {
+        "@opentui/core": previewModule,
+        "@opentui/core/browser": previewModule,
+      },
+      scope: createPreviewScope(
+        {
+          "@opentui/core": previewModule,
+          "@opentui/core/browser": previewModule,
+        },
+        browserProcess,
+      ),
+    }
+
+    const execute = new Function("runtime", `return (async () => { ${compiled} })()`)
+    await execute(runtime)
+    return { renderers }
+  } finally {
+    globalThis.process = originalProcess
+  }
 }
 
 test("doc preview runtime exposes the construct helpers used by component examples", () => {
@@ -319,6 +375,33 @@ test("component docs examples execute in isolation", async () => {
         const message = error instanceof Error ? error.message : String(error)
         failures.push(
           `${path.basename(example.filePath)} example ${example.index + 1} (${example.summary}): ${message}`,
+        )
+      }
+    }
+  }
+
+  expect(failures).toEqual([])
+})
+
+test("scrollbox docs examples render populated previews", async () => {
+  const failures: string[] = []
+
+  for (const themeMode of ["dark", "light"] as const) {
+    for (const example of getDocExamples("scrollbox.mdx")) {
+      try {
+        const { compiled } = await compileExample(example.code, example.language)
+        const result = await runCompiledExample(compiled, themeMode)
+        const previewRoot = result.renderers.at(-1)?.root.children[0]
+
+        if (!(previewRoot instanceof FakeRenderable) || previewRoot.children.length === 0) {
+          failures.push(
+            `scrollbox.mdx example ${example.index + 1} (${example.summary}) renders an empty ScrollBox preview in ${themeMode} mode`,
+          )
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        failures.push(
+          `scrollbox.mdx example ${example.index + 1} (${example.summary}) failed in ${themeMode} mode: ${message}`,
         )
       }
     }
