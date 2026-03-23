@@ -23,6 +23,7 @@ import { getObjectsInViewport } from "./lib/objects-in-viewport.js"
 import { KeyHandler, InternalKeyHandler } from "./lib/KeyHandler.js"
 import { isEditBufferRenderable, type EditBufferRenderable } from "./renderables/EditBufferRenderable.js"
 import { env, registerEnvVar } from "./lib/env.js"
+import { scheduleNextMicrotask } from "./lib/schedule.js"
 import {
   createTerminalPalette,
   type TerminalPaletteDetector,
@@ -755,7 +756,7 @@ export class CliRenderer extends EventEmitter implements RenderContext {
     this._keyHandler = new InternalKeyHandler()
     this._keyHandler.on("keypress", (event) => {
       if (this.exitOnCtrlC && event.name === "c" && event.ctrl) {
-        process.nextTick(() => {
+        scheduleNextMicrotask(() => {
           this.destroy()
         })
         return
@@ -934,7 +935,7 @@ export class CliRenderer extends EventEmitter implements RenderContext {
       const data = typeof chunk === "string" ? chunk : (chunk?.toString() ?? "")
       this.lib.writeOut(this.rendererPtr, data)
       if (typeof callback === "function") {
-        process.nextTick(callback)
+        scheduleNextMicrotask(callback)
       }
       return true
     }
@@ -965,7 +966,7 @@ export class CliRenderer extends EventEmitter implements RenderContext {
       const delay = Math.max(this.minTargetFrameTime - elapsed, 0)
 
       if (delay === 0) {
-        process.nextTick(() => this.activateFrame())
+        scheduleNextMicrotask(() => this.activateFrame())
         return
       }
 
@@ -1171,7 +1172,7 @@ export class CliRenderer extends EventEmitter implements RenderContext {
     }
 
     if (typeof callback === "function") {
-      process.nextTick(callback)
+      scheduleNextMicrotask(callback)
     }
 
     return true

@@ -1,5 +1,6 @@
 import type { KeyEvent } from "../lib/KeyHandler.js"
 import { getObjectsInViewport } from "../lib/objects-in-viewport.js"
+import { scheduleNextMicrotask } from "../lib/schedule.js"
 import { LinearScrollAccel, MacOSScrollAccel, type ScrollAcceleration } from "../lib/scroll-acceleration.js"
 import type { Renderable, RenderableOptions } from "../Renderable.js"
 import type { MouseEvent } from "../renderer.js"
@@ -779,7 +780,7 @@ export class ScrollBoxRenderable extends BoxRenderable {
     // and update all renderables in one go before rendering.
     // OR: Move this logic to the viewport. IMHO the wrapper and viewport are overkill and not necessary.
     //     The Scrollbox can be the viewport, we are using translations on the content anyway.
-    process.nextTick(() => {
+    scheduleNextMicrotask(() => {
       this.requestRender()
     })
   }

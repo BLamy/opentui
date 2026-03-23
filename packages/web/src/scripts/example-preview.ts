@@ -20,6 +20,7 @@ import {
   resolveThemeMode,
   type ThemeMode,
 } from "./docs-example-theme"
+import { ensureBrowserProcessShim } from "./browser-process"
 import { shouldAutoFocusPreview } from "./example-preview-focus"
 import { compileExample } from "./example-preview-compiler"
 
@@ -298,15 +299,12 @@ async function ensureRenderLib(wasmUrl: string): Promise<void> {
   await renderLibPromise
 }
 
-function createPreviewScope(modules: Record<string, Record<string, unknown>>): Record<string, unknown> {
+function createPreviewScope(
+  modules: Record<string, Record<string, unknown>>,
+  browserProcess: ReturnType<typeof ensureBrowserProcessShim>,
+): Record<string, unknown> {
   const scope: Record<string, unknown> = {
-    process: {
-      cwd: () => "/",
-      env: {},
-      exit: () => {
-        throw new Error("process.exit() is not available in the browser preview runtime.")
-      },
-    },
+    process: browserProcess,
   }
 
   for (const moduleExports of Object.values(modules)) {
@@ -317,6 +315,7 @@ function createPreviewScope(modules: Record<string, Record<string, unknown>>): R
 }
 
 async function createRuntime(session: PreviewSession): Promise<PreviewRuntime> {
+  const browserProcess = ensureBrowserProcessShim()
   const [coreRuntime, browserRuntime] = await Promise.all([ensureBrowserCore(), ensureBrowserModule()])
 
   const coreModule = {
@@ -336,7 +335,7 @@ async function createRuntime(session: PreviewSession): Promise<PreviewRuntime> {
 
   return {
     modules,
-    scope: createPreviewScope(modules),
+    scope: createPreviewScope(modules, browserProcess),
   }
 }
 

@@ -16,6 +16,18 @@ A scrollable container that supports horizontal and vertical scrolling, sticky s
 import { ScrollBoxRenderable, TextRenderable, BoxRenderable, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
+const palette =
+  (renderer.themeMode ?? "dark") === "light"
+    ? {
+        stripeA: "#dbeafe",
+        stripeB: "#eff6ff",
+        text: "#1e293b",
+      }
+    : {
+        stripeA: "#243041",
+        stripeB: "#2b3950",
+        text: "#e5eefc",
+      }
 
 const scrollbox = new ScrollBoxRenderable(renderer, {
   id: "scrollbox",
@@ -25,14 +37,22 @@ const scrollbox = new ScrollBoxRenderable(renderer, {
 
 // Add content to the scrollbox
 for (let i = 0; i < 100; i++) {
-  scrollbox.add(
-    new BoxRenderable(renderer, {
-      id: `item-${i}`,
-      width: "100%",
-      height: 2,
-      backgroundColor: i % 2 === 0 ? "#292e42" : "#2f3449",
+  const row = new BoxRenderable(renderer, {
+    id: `item-${i}`,
+    width: "100%",
+    height: 2,
+    paddingLeft: 1,
+    backgroundColor: i % 2 === 0 ? palette.stripeA : palette.stripeB,
+  })
+
+  row.add(
+    new TextRenderable(renderer, {
+      content: `Item ${i}`,
+      fg: palette.text,
     }),
   )
+
+  scrollbox.add(row)
 }
 
 renderer.root.add(scrollbox)
@@ -44,6 +64,18 @@ renderer.root.add(scrollbox)
 import { ScrollBox, Box, Text, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
+const palette =
+  (renderer.themeMode ?? "dark") === "light"
+    ? {
+        stripeA: "#dbeafe",
+        stripeB: "#eff6ff",
+        text: "#1e293b",
+      }
+    : {
+        stripeA: "#243041",
+        stripeB: "#2b3950",
+        text: "#e5eefc",
+      }
 
 renderer.root.add(
   ScrollBox(
@@ -53,8 +85,8 @@ renderer.root.add(
     },
     ...Array.from({ length: 100 }, (_, i) =>
       Box(
-        { width: "100%", padding: 1, backgroundColor: i % 2 === 0 ? "#292e42" : "#2f3449" },
-        Text({ content: `Item ${i}` }),
+        { width: "100%", padding: 1, backgroundColor: i % 2 === 0 ? palette.stripeA : palette.stripeB },
+        Text({ content: `Item ${i}`, fg: palette.text }),
       ),
     ),
   ),
@@ -66,9 +98,10 @@ renderer.root.add(
 Enable sticky scroll to keep content pinned to an edge as new content arrives. Useful for log viewers or chat interfaces.
 
 ```ts example
-import { ScrollBoxRenderable, createCliRenderer } from "@opentui/core"
+import { ScrollBoxRenderable, TextRenderable, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
+const palette = (renderer.themeMode ?? "dark") === "light" ? { text: "#1f2937" } : { text: "#e5eefc" }
 
 const scrollbox = new ScrollBoxRenderable(renderer, {
   id: "logs",
@@ -79,6 +112,15 @@ const scrollbox = new ScrollBoxRenderable(renderer, {
 })
 
 renderer.root.add(scrollbox)
+
+for (let i = 0; i < 30; i++) {
+  scrollbox.add(
+    new TextRenderable(renderer, {
+      content: `[12:${String(i).padStart(2, "0")}] Processed event ${i + 1}`,
+      fg: palette.text,
+    }),
+  )
+}
 ```
 
 ### Sticky positions
@@ -95,9 +137,10 @@ When you scroll away from the sticky position, sticky behavior pauses until you 
 Enable scrolling in both directions:
 
 ```ts example
-import { ScrollBoxRenderable, createCliRenderer } from "@opentui/core"
+import { ScrollBoxRenderable, TextRenderable, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
+const palette = (renderer.themeMode ?? "dark") === "light" ? { text: "#334155" } : { text: "#dbeafe" }
 
 const scrollbox = new ScrollBoxRenderable(renderer, {
   id: "canvas",
@@ -106,6 +149,15 @@ const scrollbox = new ScrollBoxRenderable(renderer, {
   scrollX: true,
   scrollY: true,
 })
+
+for (let row = 0; row < 18; row++) {
+  scrollbox.add(
+    new TextRenderable(renderer, {
+      content: `Row ${String(row).padStart(2, "0")} | ${".".repeat(90)} ${row}`,
+      fg: palette.text,
+    }),
+  )
+}
 
 renderer.root.add(scrollbox)
 ```
@@ -117,9 +169,10 @@ By default, `scrollY` is `true` and `scrollX` is `false`.
 Enable viewport culling for better performance with large content. When enabled, ScrollBox renders only visible children:
 
 ```ts example
-import { ScrollBoxRenderable, createCliRenderer } from "@opentui/core"
+import { ScrollBoxRenderable, TextRenderable, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
+const palette = (renderer.themeMode ?? "dark") === "light" ? { text: "#334155" } : { text: "#dbeafe" }
 
 const scrollbox = new ScrollBoxRenderable(renderer, {
   id: "large-list",
@@ -127,6 +180,15 @@ const scrollbox = new ScrollBoxRenderable(renderer, {
   height: 20,
   viewportCulling: true, // Only render visible items
 })
+
+for (let i = 0; i < 200; i++) {
+  scrollbox.add(
+    new TextRenderable(renderer, {
+      content: `Visible row ${String(i).padStart(3, "0")}`,
+      fg: palette.text,
+    }),
+  )
+}
 
 renderer.root.add(scrollbox)
 ```
@@ -136,9 +198,23 @@ renderer.root.add(scrollbox)
 Style the scrollbars using nested options:
 
 ```ts example
-import { ScrollBoxRenderable, createCliRenderer } from "@opentui/core"
+import { ScrollBoxRenderable, TextRenderable, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
+const palette =
+  (renderer.themeMode ?? "dark") === "light"
+    ? {
+        text: "#334155",
+        track: "#dbe4f0",
+        thumb: "#64748b",
+        secondaryTrack: "#e2e8f0",
+      }
+    : {
+        text: "#dbeafe",
+        track: "#334155",
+        thumb: "#93c5fd",
+        secondaryTrack: "#1e293b",
+      }
 
 const scrollbox = new ScrollBoxRenderable(renderer, {
   id: "styled-scroll",
@@ -147,18 +223,29 @@ const scrollbox = new ScrollBoxRenderable(renderer, {
   scrollbarOptions: {
     showArrows: true,
     trackOptions: {
-      foregroundColor: "#7aa2f7",
-      backgroundColor: "#414868",
+      foregroundColor: palette.thumb,
+      backgroundColor: palette.track,
     },
   },
   // Or customize vertical and horizontal separately
   verticalScrollbarOptions: {
-    trackOptions: { backgroundColor: "#333" },
+    trackOptions: { backgroundColor: palette.secondaryTrack },
   },
   horizontalScrollbarOptions: {
-    trackOptions: { backgroundColor: "#333" },
+    trackOptions: { backgroundColor: palette.secondaryTrack },
   },
 })
+
+for (let i = 0; i < 32; i++) {
+  scrollbox.add(
+    new TextRenderable(renderer, {
+      content: `Styled entry ${String(i).padStart(2, "0")}`,
+      fg: palette.text,
+    }),
+  )
+}
+
+scrollbox.scrollTo(10)
 
 renderer.root.add(scrollbox)
 ```
@@ -168,27 +255,63 @@ renderer.root.add(scrollbox)
 ScrollBox contains several internal components that you can style individually:
 
 ```ts example
-import { ScrollBoxRenderable, createCliRenderer } from "@opentui/core"
+import { BoxRenderable, ScrollBoxRenderable, TextRenderable, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
+const palette =
+  (renderer.themeMode ?? "dark") === "light"
+    ? {
+        root: "#f8fafc",
+        wrapper: "#eef2ff",
+        viewport: "#e0f2fe",
+        content: "#dbeafe",
+        panelA: "#ffffff",
+        panelB: "#f5f3ff",
+        text: "#1e293b",
+      }
+    : {
+        root: "#0f172a",
+        wrapper: "#172033",
+        viewport: "#101827",
+        content: "#0b1120",
+        panelA: "#243041",
+        panelB: "#2b3950",
+        text: "#e5eefc",
+      }
 
 const scrollbox = new ScrollBoxRenderable(renderer, {
   id: "custom-scroll",
   width: 40,
   height: 20,
   rootOptions: {
-    backgroundColor: "#24283b",
+    backgroundColor: palette.root,
   },
   wrapperOptions: {
-    backgroundColor: "#1f2335",
+    backgroundColor: palette.wrapper,
   },
   viewportOptions: {
-    backgroundColor: "#1a1b26",
+    backgroundColor: palette.viewport,
   },
   contentOptions: {
-    backgroundColor: "#16161e",
+    backgroundColor: palette.content,
   },
 })
+
+for (let i = 0; i < 6; i++) {
+  scrollbox.add(
+    new BoxRenderable(renderer, {
+      width: "100%",
+      padding: 1,
+      marginBottom: 1,
+      backgroundColor: i % 2 === 0 ? palette.panelA : palette.panelB,
+    }).add(
+      new TextRenderable(renderer, {
+        content: `Panel ${i + 1}`,
+        fg: palette.text,
+      }),
+    ),
+  )
+}
 
 renderer.root.add(scrollbox)
 ```
@@ -203,6 +326,16 @@ Scroll by a relative amount:
 import { BoxRenderable, ScrollBoxRenderable, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
+const palette =
+  (renderer.themeMode ?? "dark") === "light"
+    ? {
+        stripeA: "#dbeafe",
+        stripeB: "#eff6ff",
+      }
+    : {
+        stripeA: "#243041",
+        stripeB: "#2b3950",
+      }
 
 const scrollbox = new ScrollBoxRenderable(renderer, {
   id: "scroll-methods",
@@ -216,7 +349,7 @@ for (let i = 0; i < 20; i++) {
       id: `item-${i}`,
       width: "100%",
       height: 2,
-      backgroundColor: i % 2 === 0 ? "#292e42" : "#2f3449",
+      backgroundColor: i % 2 === 0 ? palette.stripeA : palette.stripeB,
     }),
   )
 }
@@ -241,6 +374,16 @@ Scroll to an absolute position:
 import { BoxRenderable, ScrollBoxRenderable, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
+const palette =
+  (renderer.themeMode ?? "dark") === "light"
+    ? {
+        stripeA: "#dbeafe",
+        stripeB: "#eff6ff",
+      }
+    : {
+        stripeA: "#243041",
+        stripeB: "#2b3950",
+      }
 
 const scrollbox = new ScrollBoxRenderable(renderer, {
   id: "scroll-to",
@@ -254,7 +397,7 @@ for (let i = 0; i < 20; i++) {
       id: `item-${i}`,
       width: "100%",
       height: 2,
-      backgroundColor: i % 2 === 0 ? "#292e42" : "#2f3449",
+      backgroundColor: i % 2 === 0 ? palette.stripeA : palette.stripeB,
     }),
   )
 }
@@ -308,9 +451,10 @@ When focused, ScrollBox responds to keyboard input:
 ScrollBox exposes its internal components for advanced use:
 
 ```ts example
-import { ScrollBoxRenderable, createCliRenderer } from "@opentui/core"
+import { ScrollBoxRenderable, TextRenderable, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
+const palette = (renderer.themeMode ?? "dark") === "light" ? { text: "#334155" } : { text: "#dbeafe" }
 
 const scrollbox = new ScrollBoxRenderable(renderer, {
   id: "internal-components",
@@ -323,6 +467,13 @@ scrollbox.viewport // BoxRenderable - visible area
 scrollbox.content // ContentRenderable - holds children
 scrollbox.horizontalScrollBar // ScrollBarRenderable
 scrollbox.verticalScrollBar // ScrollBarRenderable
+
+scrollbox.add(
+  new TextRenderable(renderer, { content: "Wrapper, viewport, and content are all addressable.", fg: palette.text }),
+)
+scrollbox.add(
+  new TextRenderable(renderer, { content: "You can style or inspect each part separately.", fg: palette.text }),
+)
 
 renderer.root.add(scrollbox)
 ```

@@ -25,6 +25,7 @@ const COPY_BUTTON_MARKUP = `
 const PREVIEW_ROUTE = "/workbench/example"
 const PREVIEW_UPDATE_DEBOUNCE_MS = 120
 const TAB_INSERT = "  "
+const DESKTOP_MQ = typeof window !== "undefined" ? window.matchMedia("(min-width: 1200px)") : null
 export const DOC_EXAMPLE_BLOCK_SELECTOR = '.content [data-doc-example="true"] pre[data-code]'
 
 function createTabButton(label: string, pane: "code" | "preview", active: boolean): HTMLButtonElement {
@@ -304,7 +305,8 @@ async function enhanceCodeBlock(pre: HTMLPreElement): Promise<void> {
 
   const wrapper = document.createElement("section")
   wrapper.className = "doc-example"
-  wrapper.dataset.pane = "code"
+  wrapper.dataset.showCode = "true"
+  wrapper.dataset.showPreview = supportsPreview ? "true" : "false"
   wrapper.dataset.previewable = supportsPreview ? "true" : "false"
   wrapper.dataset.resizing = "false"
   wrapper.style.setProperty("--doc-example-code-min-width", `${DOC_EXAMPLE_CODE_PANE_MIN_WIDTH}px`)
@@ -333,15 +335,37 @@ async function enhanceCodeBlock(pre: HTMLPreElement): Promise<void> {
     const tabs = document.createElement("div")
     tabs.className = "doc-example__tabs"
 
-    const previewTab = createTabButton("Preview", "preview", false)
-    const setPane = (pane: "code" | "preview") => {
-      wrapper.dataset.pane = pane
-      codeTab.setAttribute("aria-selected", pane === "code" ? "true" : "false")
-      previewTab.setAttribute("aria-selected", pane === "preview" ? "true" : "false")
+    const previewTab = createTabButton("Preview", "preview", true)
+
+    const syncTabState = () => {
+      codeTab.setAttribute("aria-selected", wrapper.dataset.showCode === "true" ? "true" : "false")
+      previewTab.setAttribute("aria-selected", wrapper.dataset.showPreview === "true" ? "true" : "false")
     }
 
-    codeTab.addEventListener("click", () => setPane("code"))
-    previewTab.addEventListener("click", () => setPane("preview"))
+    codeTab.addEventListener("click", () => {
+      if (DESKTOP_MQ?.matches) {
+        const next = wrapper.dataset.showCode === "true" ? "false" : "true"
+        if (next === "false" && wrapper.dataset.showPreview === "false") return
+        wrapper.dataset.showCode = next
+      } else {
+        wrapper.dataset.showCode = "true"
+        wrapper.dataset.showPreview = "false"
+      }
+      syncTabState()
+    })
+
+    previewTab.addEventListener("click", () => {
+      if (DESKTOP_MQ?.matches) {
+        const next = wrapper.dataset.showPreview === "true" ? "false" : "true"
+        if (next === "false" && wrapper.dataset.showCode === "false") return
+        wrapper.dataset.showPreview = next
+      } else {
+        wrapper.dataset.showCode = "false"
+        wrapper.dataset.showPreview = "true"
+      }
+      syncTabState()
+    })
+
     tabs.append(codeTab, previewTab)
     toolbar.append(tabs)
   } else {
