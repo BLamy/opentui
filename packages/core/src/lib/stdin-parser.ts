@@ -5,7 +5,6 @@
 // bytes. The parser owns all byte framing and protocol recognition. It does NOT
 // own event dispatch — that belongs to KeyHandler and the renderer.
 
-import { Buffer } from "node:buffer"
 import { SystemClock, type Clock, type TimerHandle } from "./clock.js"
 import { parseKeypress, type ParsedKey } from "./parse.keypress.js"
 import { MouseParser, type RawMouseEvent } from "./parse.mouse.js"
@@ -103,10 +102,11 @@ const DEFAULT_MAX_PENDING_BYTES = 64 * 1024
 const INITIAL_PENDING_CAPACITY = 256
 const ESC = 0x1b
 const BEL = 0x07
-const BRACKETED_PASTE_START = Buffer.from("\x1b[200~")
-const BRACKETED_PASTE_END = Buffer.from("\x1b[201~")
+const BRACKETED_PASTE_START = new TextEncoder().encode("\x1b[200~")
+const BRACKETED_PASTE_END = new TextEncoder().encode("\x1b[201~")
 const EMPTY_BYTES = new Uint8Array(0)
 const KEY_DECODER = new TextDecoder()
+const LATIN1_DECODER = new TextDecoder("latin1")
 const DEFAULT_PROTOCOL_CONTEXT: StdinParserProtocolContext = {
   kittyKeyboardEnabled: false,
   privateCapabilityRepliesActive: false,
@@ -479,7 +479,7 @@ function indexOfBytes(haystack: Uint8Array, needle: Uint8Array): number {
 // where the wire bytes may not be valid UTF-8 but need a lossless string
 // form for downstream sequence handlers.
 function decodeLatin1(bytes: Uint8Array): string {
-  return Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString("latin1")
+  return LATIN1_DECODER.decode(bytes)
 }
 
 function decodeUtf8(bytes: Uint8Array): string {
@@ -1615,7 +1615,7 @@ export class StdinParser {
   // existing meta-key behavior (e.g. Alt+letter in terminals that send
   // high bytes instead of ESC-prefixed sequences).
   private emitLegacyHighByte(byte: number): void {
-    const parsed = parseKeypress(Buffer.from([byte]), { useKittyKeyboard: this.useKittyKeyboard })
+    const parsed = parseKeypress(new Uint8Array([byte]), { useKittyKeyboard: this.useKittyKeyboard })
     if (parsed) {
       this.events.push({
         type: "key",

@@ -7,21 +7,36 @@ export * from "./client.js"
 export * from "../tree-sitter-styled-text.js"
 export * from "./types.js"
 export * from "./resolve-ft.js"
-export type { UpdateOptions } from "./assets/update.js"
-export { updateAssets } from "./assets/update.js"
+
+const BROWSER_TREE_SITTER_DATA_PATH = ".opentui-browser"
+
+function isBrowserRuntime(): boolean {
+  return typeof document !== "undefined"
+}
+
+export function getDefaultTreeSitterDataPath(): string {
+  if (isBrowserRuntime()) {
+    return BROWSER_TREE_SITTER_DATA_PATH
+  }
+
+  return getDataPaths().globalDataPath
+}
 
 export function getTreeSitterClient(): TreeSitterClient {
-  const dataPathsManager = getDataPaths()
   const defaultOptions: TreeSitterClientOptions = {
-    dataPath: dataPathsManager.globalDataPath,
+    dataPath: getDefaultTreeSitterDataPath(),
   }
 
   return singleton("tree-sitter-client", () => {
     const client = new TreeSitterClient(defaultOptions)
 
-    dataPathsManager.on("paths:changed", (paths) => {
-      client.setDataPath(paths.globalDataPath)
-    })
+    if (!isBrowserRuntime()) {
+      const dataPathsManager = getDataPaths()
+
+      dataPathsManager.on("paths:changed", (paths) => {
+        client.setDataPath(paths.globalDataPath)
+      })
+    }
 
     return client
   })

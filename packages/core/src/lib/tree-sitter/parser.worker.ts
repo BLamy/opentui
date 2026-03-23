@@ -15,6 +15,10 @@ import { isMainThread } from "worker_threads"
 import { isBunfsPath, normalizeBunfsPath } from "../bunfs.js"
 
 const self = globalThis
+const isBrowserWorkerRuntime =
+  typeof WorkerGlobalScope !== "undefined" &&
+  typeof globalThis !== "undefined" &&
+  globalThis instanceof WorkerGlobalScope
 
 type ParserState = {
   parser: Parser
@@ -85,15 +89,25 @@ class ParserWorker {
       this.dataPath = dataPath
       this.tsDataPath = path.join(dataPath, "tree-sitter")
 
-      await mkdir(path.join(this.tsDataPath, "languages"), { recursive: true })
-      await mkdir(path.join(this.tsDataPath, "queries"), { recursive: true })
+      if (!isBrowserWorkerRuntime) {
+        await mkdir(path.join(this.tsDataPath, "languages"), { recursive: true })
+        await mkdir(path.join(this.tsDataPath, "queries"), { recursive: true })
+      }
 
-      let { default: treeWasm } = await import("web-tree-sitter/tree-sitter.wasm" as string, {
-        with: { type: "wasm" },
-      })
+      let treeWasm: string
+      if (isBrowserWorkerRuntime) {
+        const treeWasmModule = (await import("web-tree-sitter/tree-sitter.wasm?url")) as { default: string }
+        treeWasm = treeWasmModule.default
+      } else {
+        const treeWasmModule = (await import("web-tree-sitter/tree-sitter.wasm" as string, {
+          with: { type: "wasm" },
+        })) as { default: string }
 
-      if (isBunfsPath(treeWasm)) {
-        treeWasm = normalizeBunfsPath(path.parse(treeWasm).base)
+        treeWasm = treeWasmModule.default
+
+        if (isBunfsPath(treeWasm)) {
+          treeWasm = normalizeBunfsPath(path.parse(treeWasm).base)
+        }
       }
 
       await Parser.init({
@@ -203,18 +217,23 @@ class ParserWorker {
       return undefined
     }
 
-    if (!result.filePath) {
+    if (!result.filePath && !result.content) {
       return undefined
     }
 
-    // Normalize path for Windows compatibility - tree-sitter expects forward slashes
-    const normalizedPath = result.filePath.replaceAll("\\", "/")
+    const languageInput = isBrowserWorkerRuntime && result.content
+      ? result.content
+      : result.filePath?.replaceAll("\\", "/")
+
+    if (!languageInput) {
+      return undefined
+    }
 
     try {
-      const language = await Language.load(normalizedPath)
+      const language = await Language.load(languageInput)
       return language
     } catch (error) {
-      console.error(`Error loading language from ${normalizedPath}:`, error)
+      console.error(`Error loading language from ${typeof languageInput === "string" ? languageInput : languageSource}:`, error)
       return undefined
     }
   }
@@ -872,6 +891,10 @@ class ParserWorker {
     this.dataPath = dataPath
     this.tsDataPath = path.join(dataPath, "tree-sitter")
 
+    if (isBrowserWorkerRuntime) {
+      return
+    }
+
     try {
       await mkdir(path.join(this.tsDataPath, "languages"), { recursive: true })
       await mkdir(path.join(this.tsDataPath, "queries"), { recursive: true })
@@ -883,6 +906,14 @@ class ParserWorker {
   async clearCache(): Promise<void> {
     if (!this.dataPath || !this.tsDataPath) {
       throw new Error("No data path configured")
+    }
+
+    if (isBrowserWorkerRuntime) {
+      this.filetypeParsers.clear()
+      this.filetypeParserPromises.clear()
+      this.reusableParsers.clear()
+      this.reusableParserPromises.clear()
+      return
     }
 
     const { rm } = await import("fs/promises")

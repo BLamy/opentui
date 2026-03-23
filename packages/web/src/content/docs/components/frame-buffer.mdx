@@ -12,7 +12,7 @@ A low-level rendering surface for custom graphics and complex visual effects. Fr
 
 ### Renderable API
 
-```typescript
+```ts example
 import { FrameBufferRenderable, RGBA, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -32,7 +32,7 @@ renderer.root.add(canvas)
 
 ### Construct API
 
-```typescript
+```ts example
 import { FrameBuffer, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -138,7 +138,7 @@ canvas.frameBuffer.drawFrameBuffer(
 
 ## Example: Simple game canvas
 
-```typescript
+```ts example
 import { FrameBufferRenderable, RGBA, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()

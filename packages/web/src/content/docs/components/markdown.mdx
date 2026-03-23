@@ -12,7 +12,7 @@ Render markdown content with syntax-aware styling and optional Tree-sitter highl
 
 ### Renderable API
 
-````typescript
+````ts example
 import { MarkdownRenderable, SyntaxStyle, RGBA, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -56,7 +56,12 @@ basenameToFiletype.set("mytoolrc", "yaml")
 
 Hide markdown markers (backticks, emphasis markers, etc.) when `conceal` is true:
 
-```typescript
+```ts example
+const syntaxStyle = SyntaxStyle.fromStyles({
+  default: { fg: RGBA.fromHex("#E6EDF3") },
+  "markup.raw": { fg: RGBA.fromHex("#A5D6FF") },
+})
+
 const markdown = new MarkdownRenderable(renderer, {
   content: "**bold** and `code`",
   syntaxStyle,
@@ -70,7 +75,12 @@ Use `concealCode` to control concealment inside fenced code blocks independently
 
 Enable streaming mode for incremental updates. Keep it `true` while appending chunks, then set `markdown.streaming = false` when complete to finalize trailing block parsing. Tables include trailing partial rows, with missing cells rendered empty.
 
-```typescript
+```ts example
+const syntaxStyle = SyntaxStyle.fromStyles({
+  default: { fg: RGBA.fromHex("#E6EDF3") },
+  "markup.heading.1": { fg: RGBA.fromHex("#58A6FF"), bold: true },
+})
+
 const markdown = new MarkdownRenderable(renderer, {
   content: "",
   syntaxStyle,
@@ -86,7 +96,12 @@ markdown.streaming = false
 
 Markdown tables support `tableOptions` for sizing, wrapping, borders, and selection.
 
-```typescript
+```ts example
+const syntaxStyle = SyntaxStyle.fromStyles({
+  default: { fg: RGBA.fromHex("#E6EDF3") },
+  "markup.table": { fg: RGBA.fromHex("#58A6FF") },
+})
+
 const markdown = new MarkdownRenderable(renderer, {
   content: "| Service | Status |\n| --- | --- |\n| api | ok |",
   syntaxStyle,
@@ -122,7 +137,12 @@ const markdown = new MarkdownRenderable(renderer, {
 
 Override rendering for a token and fall back to default rendering:
 
-```typescript
+```ts example
+const syntaxStyle = SyntaxStyle.fromStyles({
+  default: { fg: RGBA.fromHex("#E6EDF3") },
+  "markup.heading.1": { fg: RGBA.fromHex("#58A6FF"), bold: true },
+})
+
 const markdown = new MarkdownRenderable(renderer, {
   content: "# Title\n\nHello",
   syntaxStyle,

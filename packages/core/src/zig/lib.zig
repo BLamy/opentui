@@ -185,6 +185,15 @@ export fn getAllocatorStats(out_ptr: *ExternalAllocatorStats) void {
     };
 }
 
+export fn wasmAlloc(len: usize) ?[*]u8 {
+    const bytes = globalAllocator.alloc(u8, len) catch return null;
+    return bytes.ptr;
+}
+
+export fn wasmFree(ptr: [*]u8, len: usize) void {
+    globalAllocator.free(ptr[0..len]);
+}
+
 export fn createRenderer(width: u32, height: u32, testing: bool, remote: bool) ?*renderer.CliRenderer {
     if (width == 0 or height == 0) {
         logger.warn("Invalid renderer dimensions: {}x{}", .{ width, height });
@@ -246,6 +255,14 @@ export fn getLastOutputForTest(rendererPtr: *renderer.CliRenderer, outSlice: *Ou
     const output = rendererPtr.getLastOutputForTest();
     outSlice.ptr = output.ptr;
     outSlice.len = output.len;
+}
+
+export fn getPendingOutputLen(rendererPtr: *renderer.CliRenderer) usize {
+    return rendererPtr.getPendingOutputLen();
+}
+
+export fn drainPendingOutput(rendererPtr: *renderer.CliRenderer, outPtr: [*]u8, maxLen: usize) usize {
+    return rendererPtr.drainPendingOutput(outPtr[0..maxLen]);
 }
 
 export fn setHyperlinksCapability(rendererPtr: *renderer.CliRenderer, enabled: bool) void {
@@ -394,6 +411,16 @@ export fn setCursorStyleOptions(rendererPtr: *renderer.CliRenderer, options: *co
     if (options.cursor <= 5) {
         rendererPtr.terminal.setMousePointerStyle(@enumFromInt(options.cursor));
     }
+}
+
+export fn setCursorStyleOptionsFlat(rendererPtr: *renderer.CliRenderer, style: i32, blinking: i32, color: ?[*]const f32, cursor: i32) void {
+    const options = CursorStyleOptions{
+        .style = if (style >= 0 and style <= 255) @intCast(style) else 255,
+        .blinking = if (blinking >= 0 and blinking <= 255) @intCast(blinking) else 255,
+        .color = color,
+        .cursor = if (cursor >= 0 and cursor <= 255) @intCast(cursor) else 255,
+    };
+    setCursorStyleOptions(rendererPtr, &options);
 }
 
 pub const ExternalCursorState = extern struct {
@@ -785,6 +812,10 @@ export fn getKittyKeyboardFlags(rendererPtr: *renderer.CliRenderer) u8 {
 
 export fn setupTerminal(rendererPtr: *renderer.CliRenderer, useAlternateScreen: bool) void {
     rendererPtr.setupTerminal(useAlternateScreen);
+}
+
+export fn setupTerminalForBrowser(rendererPtr: *renderer.CliRenderer, useAlternateScreen: bool) void {
+    rendererPtr.setupTerminalForBrowser(useAlternateScreen);
 }
 
 export fn suspendRenderer(rendererPtr: *renderer.CliRenderer) void {

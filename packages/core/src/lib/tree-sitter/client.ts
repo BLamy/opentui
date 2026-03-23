@@ -11,7 +11,6 @@ import type {
   PerformanceStats,
   SimpleHighlight,
 } from "./types.js"
-import { getParsers } from "./default-parsers.js"
 import { resolve, isAbsolute, parse } from "path"
 import { existsSync } from "fs"
 import { registerEnvVar, env } from "../env.js"
@@ -35,9 +34,28 @@ interface EditQueueItem {
   isReset?: boolean
 }
 
-let DEFAULT_PARSERS: FiletypeParserOptions[] = getParsers()
+let DEFAULT_PARSERS: FiletypeParserOptions[] | undefined
+
+function isBrowserDefaultParsersRuntime(): boolean {
+  return typeof window !== "undefined" && typeof document !== "undefined"
+}
+
+async function ensureDefaultParsers(): Promise<FiletypeParserOptions[]> {
+  if (DEFAULT_PARSERS) {
+    return DEFAULT_PARSERS
+  }
+
+  const defaultParsersModule = new URL(
+    isBrowserDefaultParsersRuntime() ? "./default-parsers-browser.ts" : "./default-parsers.js",
+    import.meta.url,
+  ).href
+  const { getParsers } = await import(/* @vite-ignore */ defaultParsersModule)
+  DEFAULT_PARSERS = getParsers()
+  return DEFAULT_PARSERS
+}
 
 export function addDefaultParsers(parsers: FiletypeParserOptions[]): void {
+  DEFAULT_PARSERS ??= []
   for (const parser of parsers) {
     DEFAULT_PARSERS = [
       ...DEFAULT_PARSERS.filter((existingParser) => existingParser.filetype !== parser.filetype),
@@ -47,6 +65,17 @@ export function addDefaultParsers(parsers: FiletypeParserOptions[]): void {
 }
 
 const isUrl = (path: string) => path.startsWith("http://") || path.startsWith("https://")
+
+export function getDefaultTreeSitterWorkerPath(importMetaUrl: string, importMetaDir?: string): string | URL {
+  if (typeof importMetaDir === "string" && importMetaDir.length > 0) {
+    const builtWorkerPath = resolve(importMetaDir, "parser.worker.js")
+    if (existsSync(builtWorkerPath)) {
+      return new URL("./parser.worker.js", importMetaUrl).href
+    }
+  }
+
+  return new URL("./parser.worker.ts", importMetaUrl)
+}
 
 // Parser options now support both URLs and local file paths
 // TODO: TreeSitterClient should have a setOptions method, passing it on to the worker etc.
@@ -97,13 +126,11 @@ export class TreeSitterClient extends EventEmitter<TreeSitterClientEvents> {
     } else if (this.options.workerPath) {
       worker_path = this.options.workerPath
     } else {
-      worker_path = new URL("./parser.worker.js", import.meta.url).href
-      if (!existsSync(resolve(import.meta.dirname, "parser.worker.js"))) {
-        worker_path = new URL("./parser.worker.ts", import.meta.url).href
-      }
+      worker_path = getDefaultTreeSitterWorkerPath(import.meta.url, import.meta.dirname)
     }
 
-    this.worker = new Worker(worker_path)
+    const browserWorker = typeof document !== "undefined"
+    this.worker = browserWorker ? new Worker(worker_path, { type: "module" }) : new Worker(worker_path)
 
     // @ts-ignore - onmessage exists
     this.worker.onmessage = this.handleWorkerMessage.bind(this)
@@ -170,7 +197,7 @@ export class TreeSitterClient extends EventEmitter<TreeSitterClientEvents> {
   }
 
   private async registerDefaultParsers(): Promise<void> {
-    for (const parser of DEFAULT_PARSERS) {
+    for (const parser of await ensureDefaultParsers()) {
       this.addFiletypeParser(parser)
     }
   }

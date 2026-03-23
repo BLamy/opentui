@@ -1,4 +1,4 @@
-import { EventEmitter } from "events"
+import { EventEmitter } from "./lib/EventEmitter.js"
 import Yoga, { Direction, Display, Edge, FlexDirection, type Config, type Node as YogaNode } from "yoga-layout"
 import { OptimizedBuffer } from "./buffer.js"
 import type { KeyEvent, PasteEvent } from "./lib/KeyHandler.js"
@@ -1114,7 +1114,7 @@ export abstract class Renderable extends BaseRenderable {
     }
 
     if (renderable.isDestroyed) {
-      if (process.env.NODE_ENV !== "production") {
+      if (typeof process !== "undefined" && process.env.NODE_ENV !== "production") {
         console.warn(`Renderable with id ${renderable.id} was already destroyed, skipping add`)
       }
       return -1
@@ -1172,7 +1172,7 @@ export abstract class Renderable extends BaseRenderable {
     }
 
     if (renderable.isDestroyed) {
-      if (process.env.NODE_ENV !== "production") {
+      if (typeof process !== "undefined" && process.env.NODE_ENV !== "production") {
         console.warn(`Renderable with id ${renderable.id} was already destroyed, skipping insertBefore`)
       }
       return -1
@@ -1183,21 +1183,21 @@ export abstract class Renderable extends BaseRenderable {
     }
 
     if (anchor.isDestroyed) {
-      if (process.env.NODE_ENV !== "production") {
+      if (typeof process !== "undefined" && process.env.NODE_ENV !== "production") {
         console.warn(`Anchor with id ${anchor.id} was already destroyed, skipping insertBefore`)
       }
       return -1
     }
 
     if (!this.renderableMapById.has(anchor.id)) {
-      if (process.env.NODE_ENV !== "production") {
+      if (typeof process !== "undefined" && process.env.NODE_ENV !== "production") {
         console.warn(`Anchor with id ${anchor.id} does not exist within the parent ${this.id}, skipping insertBefore`)
       }
       return -1
     }
 
     if (renderable === anchor || renderable.id === anchor.id) {
-      if (process.env.NODE_ENV !== "production") {
+      if (typeof process !== "undefined" && process.env.NODE_ENV !== "production") {
         console.warn(`Anchor is the same as the node ${renderable.id} being inserted, skipping insertBefore`)
       }
       return -1

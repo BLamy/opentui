@@ -1,5 +1,4 @@
 import type { RGBA } from "./lib/RGBA.js"
-import type { EventEmitter } from "events"
 import type { Selection } from "./lib/selection.js"
 import type { Renderable } from "./Renderable.js"
 import type { InternalKeyHandler, KeyHandler } from "./lib/KeyHandler.js"
@@ -59,7 +58,7 @@ export type WidthMethod = "wcwidth" | "unicode"
 
 export interface RendererEvents {
   resize: (width: number, height: number) => void
-  key: (data: Buffer) => void
+  key: (data: Uint8Array) => void
   "memory:snapshot": (snapshot: { heapUsed: number; heapTotal: number; arrayBuffers: number }) => void
   selection: (selection: Selection) => void
   focused_editor: (current: EditBufferRenderable | null, previous: EditBufferRenderable | null) => void
@@ -67,7 +66,13 @@ export interface RendererEvents {
   theme_mode: (mode: ThemeMode) => void
 }
 
-export interface RenderContext extends EventEmitter {
+export interface RenderEventSource {
+  on: (event: string, listener: (...args: any[]) => void) => unknown
+  off?: (event: string, listener: (...args: any[]) => void) => unknown
+  emit: (event: string, ...args: any[]) => boolean
+}
+
+export interface RenderContext extends RenderEventSource {
   addToHitGrid: (x: number, y: number, width: number, height: number, id: number) => void
   pushHitGridScissorRect: (x: number, y: number, width: number, height: number) => void
   popHitGridScissorRect: () => void

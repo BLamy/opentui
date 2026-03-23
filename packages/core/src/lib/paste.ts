@@ -12,5 +12,5 @@ export function decodePasteBytes(bytes: Uint8Array): string {
 }
 
 export function stripAnsiSequences(text: string): string {
-  return Bun.stripANSI(text)
+  return text.replace(/\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~]|\][^\u0007]*(?:\u0007|\x1b\\))/g, "")
 }

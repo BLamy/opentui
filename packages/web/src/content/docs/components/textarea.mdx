@@ -12,7 +12,7 @@ Multi-line text input with cursor, selection, and rich keybindings.
 
 ### Renderable API
 
-```typescript
+```ts example
 import { TextareaRenderable, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -36,7 +36,7 @@ textarea.focus()
 
 Bind a submit action and listen for `onSubmit`:
 
-```typescript
+```ts example
 import { TextareaRenderable } from "@opentui/core"
 
 const textarea = new TextareaRenderable(renderer, {
@@ -51,7 +51,7 @@ const textarea = new TextareaRenderable(renderer, {
 
 ## Placeholder styling
 
-```typescript
+```ts example
 const textarea = new TextareaRenderable(renderer, {
   width: 40,
   height: 4,

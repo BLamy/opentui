@@ -12,7 +12,7 @@ Render unified or split diffs with syntax highlighting and optional line numbers
 
 ### Renderable API
 
-```typescript
+```ts example
 import { DiffRenderable, SyntaxStyle, RGBA, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -27,7 +27,7 @@ const diff = new DiffRenderable(renderer, {
   id: "diff",
   width: "100%",
   height: 16,
-  diff: `diff --git a/app.ts b/app.ts\nindex 1111111..2222222 100644\n--- a/app.ts\n+++ b/app.ts\n@@ -1,3 +1,3 @@\n-const a = 1\n+const a = 2\n`,
+  diff: `diff --git a/app.ts b/app.ts\nindex 1111111..2222222 100644\n--- a/app.ts\n+++ b/app.ts\n@@ -1,1 +1,1 @@\n-const a = 1\n+const a = 2\n`,
   view: "split",
   filetype: "typescript",
   syntaxStyle,

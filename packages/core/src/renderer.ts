@@ -10,7 +10,7 @@ import {
   type WidthMethod,
 } from "./types.js"
 import { RGBA, parseColor, type ColorInput } from "./lib/RGBA.js"
-import type { Pointer } from "bun:ffi"
+import type { Pointer } from "./lib/ffi-runtime.js"
 import { OptimizedBuffer } from "./buffer.js"
 import { resolveRenderLib, type RenderLib } from "./zig.js"
 import { TerminalConsole, type ConsoleOptions, capture } from "./console.js"
@@ -23,7 +23,6 @@ import { getObjectsInViewport } from "./lib/objects-in-viewport.js"
 import { KeyHandler, InternalKeyHandler } from "./lib/KeyHandler.js"
 import { isEditBufferRenderable, type EditBufferRenderable } from "./renderables/EditBufferRenderable.js"
 import { env, registerEnvVar } from "./lib/env.js"
-import { getTreeSitterClient } from "./lib/tree-sitter/index.js"
 import {
   createTerminalPalette,
   type TerminalPaletteDetector,
@@ -410,7 +409,6 @@ const rendererTracker = singleton("RendererTracker", () => {
         process.stdin.pause()
 
         if (hasSingleton("tree-sitter-client")) {
-          getTreeSitterClient().destroy()
           destroySingleton("tree-sitter-client")
         }
       }

@@ -1,0 +1,154 @@
+---
+interface Props {
+  title?: string
+  description?: string
+  href?: string
+  embedSrc?: string
+  height?: number
+}
+
+const {
+  title = "OpenTUI browser workbench",
+  description = "Try the browser runtime directly in the docs. This demo runs the Zig renderer as WebAssembly through @opentui/core/browser and keeps keyboard, mouse, resize, selection, alt-screen, and clipboard behavior interactive.",
+  href = "/workbench",
+  embedSrc = "/workbench/embed",
+  height = 640,
+} = Astro.props
+---
+
+<section class="browser-demo" style={`--browser-demo-height: ${height}px;`}>
+  <div class="browser-demo__header">
+    <div class="browser-demo__copy">
+      <div class="browser-demo__eyebrow">Live Demo</div>
+      <div class="browser-demo__title">{title}</div>
+      <p>{description}</p>
+    </div>
+    <a href={href} class="browser-demo__link">Open full workbench</a>
+  </div>
+
+  <div class="browser-demo__frame">
+    <iframe
+      src={embedSrc}
+      title={title}
+      loading="lazy"
+      allow="clipboard-read; clipboard-write"
+      referrerpolicy="strict-origin-when-cross-origin"
+    ></iframe>
+  </div>
+
+  <p class="browser-demo__note">
+    Running the docs site locally and seeing a wasm load error? Run <code>cd packages/core && bun run build:wasm</code>,
+    then <code>cd packages/web && bun run sync:core-wasm</code>.
+  </p>
+</section>
+
+<style>
+  .browser-demo {
+    margin: 32px 0;
+    border: 1px solid rgba(15, 0, 0, 0.12);
+    border-radius: 28px;
+    background:
+      linear-gradient(180deg, rgba(255, 251, 243, 0.92), rgba(247, 239, 228, 0.98)),
+      linear-gradient(135deg, rgba(245, 171, 83, 0.08), transparent 38%);
+    overflow: hidden;
+    box-shadow:
+      0 22px 60px rgba(36, 24, 12, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  }
+
+  .browser-demo__header {
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 22px 24px 18px;
+    border-bottom: 1px solid rgba(15, 0, 0, 0.08);
+  }
+
+  .browser-demo__copy {
+    max-width: 72ch;
+  }
+
+  .browser-demo__eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #8d5d28;
+    margin-bottom: 8px;
+  }
+
+  .browser-demo__title {
+    font-family: var(--font-mono);
+    font-size: 20px;
+    line-height: 1.3;
+    color: var(--color-text-strong);
+    margin-bottom: 8px;
+  }
+
+  .browser-demo__copy p {
+    color: var(--color-text);
+    line-height: 1.8;
+  }
+
+  .browser-demo__link {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #402d1d;
+    border: 1px solid rgba(64, 45, 29, 0.18);
+    border-radius: 999px;
+    padding: 10px 14px;
+    background: rgba(255, 248, 236, 0.9);
+    text-decoration: none;
+  }
+
+  .browser-demo__link:hover {
+    text-decoration: none;
+    background: rgba(255, 248, 236, 1);
+  }
+
+  .browser-demo__frame {
+    padding: 18px;
+    background:
+      linear-gradient(180deg, rgba(17, 25, 33, 0.96), rgba(9, 15, 20, 0.98)),
+      linear-gradient(90deg, rgba(77, 198, 194, 0.08), transparent 32%, rgba(245, 171, 83, 0.08));
+  }
+
+  .browser-demo__frame iframe {
+    display: block;
+    width: 100%;
+    height: var(--browser-demo-height);
+    border: 0;
+    border-radius: 20px;
+    background: rgba(6, 10, 13, 0.96);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+  }
+
+  .browser-demo__note {
+    padding: 0 24px 22px;
+    font-size: 13px;
+    color: var(--color-text-weak);
+  }
+
+  .browser-demo__note code {
+    font-size: 12px;
+  }
+
+  @media (max-width: 720px) {
+    .browser-demo__header {
+      flex-direction: column;
+    }
+
+    .browser-demo__link {
+      width: 100%;
+      text-align: center;
+    }
+
+    .browser-demo__frame {
+      padding: 14px;
+    }
+  }
+</style>

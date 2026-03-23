@@ -72,6 +72,7 @@ const features = [
         <nav class="landing-nav">
           <a href="https://github.com/anomalyco/opentui" target="_blank" rel="noopener noreferrer">GitHub</a>
           <a href="/docs/getting-started">Docs</a>
+          <a href="/workbench">Workbench</a>
         </nav>
       </header>
 
@@ -79,6 +80,7 @@ const features = [
       <nav class="mobile-nav" id="landing-mobile-nav">
         <a href="https://github.com/anomalyco/opentui" target="_blank" rel="noopener noreferrer">GitHub</a>
         <a href="/docs/getting-started">Docs</a>
+        <a href="/workbench">Workbench</a>
       </nav>
 
       <!-- Content -->
@@ -275,147 +277,5 @@ renderer.root.<span class="function">add</span>(
 </Base>
 
 <script>
-  const installCommands: Record<string, { cmd: string; pkg: string }> = {
-    create: { cmd: "bun create", pkg: "tui" },
-    manual: { cmd: "bun add", pkg: "@opentui/core" },
-    skill: { cmd: "npx skills add", pkg: "msmps/opentui-skill" },
-  }
-
-  // Tab switching
-  const tabs = document.querySelectorAll('.install-tab')
-  const commandBtn = document.getElementById('install-display') as HTMLButtonElement
-  
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      const key = tab.getAttribute('data-tab') as keyof typeof installCommands
-      const { cmd, pkg } = installCommands[key]
-      
-      // Update active tab
-      tabs.forEach(t => t.setAttribute('aria-selected', 'false'))
-      tab.setAttribute('aria-selected', 'true')
-      
-      // Update command display
-      if (commandBtn) {
-        const codeEl = commandBtn.querySelector('code')
-        if (codeEl) {
-          codeEl.innerHTML = `<span class="cmd">${cmd} </span><span class="highlight">${pkg}</span>`
-        }
-        commandBtn.setAttribute('data-command', `${cmd} ${pkg}`)
-      }
-    })
-  })
-
-  // Copy functionality - clicking the whole command button copies
-  if (commandBtn) {
-    commandBtn.addEventListener('click', async () => {
-      const command = commandBtn.getAttribute('data-command')
-      if (command) {
-        await navigator.clipboard.writeText(command)
-        const copyBtn = commandBtn.querySelector('.copy-btn')
-        if (copyBtn) {
-          copyBtn.classList.add('copied')
-          setTimeout(() => copyBtn.classList.remove('copied'), 1500)
-        }
-      }
-    })
-  }
-
-  // Code editor tab switching
-  const editorTabs = document.querySelectorAll('.code-editor-tab')
-  const editorPanels = document.querySelectorAll('.code-editor-body')
-  
-  editorTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      const tabId = tab.getAttribute('data-tab')
-      
-      editorTabs.forEach(t => t.setAttribute('aria-selected', 'false'))
-      tab.setAttribute('aria-selected', 'true')
-      
-      editorPanels.forEach(panel => {
-        panel.setAttribute('data-active', panel.getAttribute('data-panel') === tabId ? 'true' : 'false')
-      })
-    })
-  })
-
-  // Feature switching logic
-  const featureItems = document.querySelectorAll('.feature-item');
-  
-  featureItems.forEach(item => {
-    item.addEventListener('click', () => {
-      // Update UI
-      featureItems.forEach(i => {
-        i.classList.remove('active');
-        const bull = i.querySelector('.bullet');
-        if (bull) bull.textContent = '[*]';
-      });
-      item.classList.add('active');
-      const bull = item.querySelector('.bullet');
-      if (bull) bull.textContent = '[o]';
-      
-      // Dispatch event
-      const feature = item.getAttribute('data-feature');
-      window.dispatchEvent(new CustomEvent('feature-change', { detail: feature }));
-    });
-    
-    // Keyboard support
-    item.addEventListener('keydown', (e: any) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        (item as HTMLElement).click();
-      }
-    });
-  });
-
-  const codeCopyBtn = document.getElementById('code-copy-btn')
-  
-  if (codeCopyBtn) {
-    codeCopyBtn.addEventListener('click', async () => {
-      const activePanel = document.querySelector('.code-editor-body[data-active="true"]')
-      if (activePanel) {
-        const codeEl = activePanel.querySelector('pre code')
-        if (codeEl) {
-          const code = codeEl.textContent || ''
-          await navigator.clipboard.writeText(code)
-          
-          codeCopyBtn.classList.add('copied')
-          setTimeout(() => codeCopyBtn.classList.remove('copied'), 1500)
-        }
-      }
-    })
-  }
-
-  // Mobile menu toggle
-  const menuBtn = document.querySelector('.mobile-menu-btn')
-  const mobileNav = document.querySelector('.mobile-nav')
-
-  function openMenu() {
-    document.body.classList.add('mobile-nav-open')
-    menuBtn?.setAttribute('aria-expanded', 'true')
-    menuBtn?.setAttribute('aria-label', 'Close navigation menu')
-  }
-
-  function closeMenu() {
-    document.body.classList.remove('mobile-nav-open')
-    menuBtn?.setAttribute('aria-expanded', 'false')
-    menuBtn?.setAttribute('aria-label', 'Open navigation menu')
-  }
-
-  menuBtn?.addEventListener('click', () => {
-    const isOpen = document.body.classList.contains('mobile-nav-open')
-    if (isOpen) {
-      closeMenu()
-    } else {
-      openMenu()
-    }
-  })
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && document.body.classList.contains('mobile-nav-open')) {
-      closeMenu()
-    }
-  })
-
-  mobileNav?.querySelectorAll('a').forEach((link) => {
-    link.addEventListener('click', closeMenu)
-  })
+  import "../scripts/index-page.ts"
 </script>

@@ -12,7 +12,7 @@ A scrollable container that supports horizontal and vertical scrolling, sticky s
 
 ### Renderable api
 
-```typescript
+```ts example
 import { ScrollBoxRenderable, TextRenderable, BoxRenderable, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -40,7 +40,7 @@ renderer.root.add(scrollbox)
 
 ### Construct API
 
-```typescript
+```ts example
 import { ScrollBox, Box, Text, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -65,7 +65,11 @@ renderer.root.add(
 
 Enable sticky scroll to keep content pinned to an edge as new content arrives. Useful for log viewers or chat interfaces.
 
-```typescript
+```ts example
+import { ScrollBoxRenderable, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
 const scrollbox = new ScrollBoxRenderable(renderer, {
   id: "logs",
   width: 60,
@@ -73,6 +77,8 @@ const scrollbox = new ScrollBoxRenderable(renderer, {
   stickyScroll: true,
   stickyStart: "bottom", // New content will keep the view scrolled to bottom
 })
+
+renderer.root.add(scrollbox)
 ```
 
 ### Sticky positions
@@ -88,7 +94,11 @@ When you scroll away from the sticky position, sticky behavior pauses until you 
 
 Enable scrolling in both directions:
 
-```typescript
+```ts example
+import { ScrollBoxRenderable, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
 const scrollbox = new ScrollBoxRenderable(renderer, {
   id: "canvas",
   width: 60,
@@ -96,6 +106,8 @@ const scrollbox = new ScrollBoxRenderable(renderer, {
   scrollX: true,
   scrollY: true,
 })
+
+renderer.root.add(scrollbox)
 ```
 
 By default, `scrollY` is `true` and `scrollX` is `false`.
@@ -104,20 +116,30 @@ By default, `scrollY` is `true` and `scrollX` is `false`.
 
 Enable viewport culling for better performance with large content. When enabled, ScrollBox renders only visible children:
 
-```typescript
+```ts example
+import { ScrollBoxRenderable, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
 const scrollbox = new ScrollBoxRenderable(renderer, {
   id: "large-list",
   width: 40,
   height: 20,
   viewportCulling: true, // Only render visible items
 })
+
+renderer.root.add(scrollbox)
 ```
 
 ## Customizing scrollbars
 
 Style the scrollbars using nested options:
 
-```typescript
+```ts example
+import { ScrollBoxRenderable, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
 const scrollbox = new ScrollBoxRenderable(renderer, {
   id: "styled-scroll",
   width: 40,
@@ -137,13 +159,19 @@ const scrollbox = new ScrollBoxRenderable(renderer, {
     trackOptions: { backgroundColor: "#333" },
   },
 })
+
+renderer.root.add(scrollbox)
 ```
 
 ## Customizing sub-components
 
 ScrollBox contains several internal components that you can style individually:
 
-```typescript
+```ts example
+import { ScrollBoxRenderable, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
 const scrollbox = new ScrollBoxRenderable(renderer, {
   id: "custom-scroll",
   width: 40,
@@ -161,6 +189,8 @@ const scrollbox = new ScrollBoxRenderable(renderer, {
     backgroundColor: "#16161e",
   },
 })
+
+renderer.root.add(scrollbox)
 ```
 
 ## Scroll methods
@@ -169,7 +199,28 @@ const scrollbox = new ScrollBoxRenderable(renderer, {
 
 Scroll by a relative amount:
 
-```typescript
+```ts example
+import { BoxRenderable, ScrollBoxRenderable, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+const scrollbox = new ScrollBoxRenderable(renderer, {
+  id: "scroll-methods",
+  width: 40,
+  height: 12,
+})
+
+for (let i = 0; i < 20; i++) {
+  scrollbox.add(
+    new BoxRenderable(renderer, {
+      id: `item-${i}`,
+      width: "100%",
+      height: 2,
+      backgroundColor: i % 2 === 0 ? "#292e42" : "#2f3449",
+    }),
+  )
+}
+
 // Scroll down 5 lines
 scrollbox.scrollBy(5)
 
@@ -178,18 +229,43 @@ scrollbox.scrollBy({ x: 10, y: 5 })
 
 // Scroll by viewport (page)
 scrollbox.scrollBy(1, "viewport")
+
+renderer.root.add(scrollbox)
 ```
 
 ### scrollTo
 
 Scroll to an absolute position:
 
-```typescript
+```ts example
+import { BoxRenderable, ScrollBoxRenderable, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+const scrollbox = new ScrollBoxRenderable(renderer, {
+  id: "scroll-to",
+  width: 40,
+  height: 12,
+})
+
+for (let i = 0; i < 20; i++) {
+  scrollbox.add(
+    new BoxRenderable(renderer, {
+      id: `item-${i}`,
+      width: "100%",
+      height: 2,
+      backgroundColor: i % 2 === 0 ? "#292e42" : "#2f3449",
+    }),
+  )
+}
+
 // Scroll to top
 scrollbox.scrollTo(0)
 
 // Scroll to specific position
 scrollbox.scrollTo({ x: 0, y: 100 })
+
+renderer.root.add(scrollbox)
 ```
 
 ## Keyboard navigation
@@ -231,10 +307,22 @@ When focused, ScrollBox responds to keyboard input:
 
 ScrollBox exposes its internal components for advanced use:
 
-```typescript
+```ts example
+import { ScrollBoxRenderable, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+const scrollbox = new ScrollBoxRenderable(renderer, {
+  id: "internal-components",
+  width: 40,
+  height: 12,
+})
+
 scrollbox.wrapper // BoxRenderable - outer wrapper
 scrollbox.viewport // BoxRenderable - visible area
 scrollbox.content // ContentRenderable - holds children
 scrollbox.horizontalScrollBar // ScrollBarRenderable
 scrollbox.verticalScrollBar // ScrollBarRenderable
+
+renderer.root.add(scrollbox)
 ```
