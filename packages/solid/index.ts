@@ -1,12 +1,23 @@
-import { CliRenderer, createCliRenderer, engine, type CliRendererConfig } from "@opentui/core"
-import { createTestRenderer, type TestRendererOptions } from "@opentui/core/testing"
+import { BrowserRenderer } from "@opentui/core/browser"
+import { engine } from "../core/src/animation/Timeline.js"
 import type { JSX } from "./jsx-runtime"
 import { RendererContext } from "./src/elements/index.js"
 import { _render as renderInternal, createComponent } from "./src/reconciler.js"
 
 type DisposeFn = () => void
+export type SolidRenderer = BrowserRenderer | import("@opentui/core").CliRenderer
 
-const mountSolidRoot = (renderer: CliRenderer, node: () => JSX.Element) => {
+function isMountedRenderer(value: unknown): value is SolidRenderer {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "root" in value &&
+    "destroy" in value &&
+    typeof (value as { destroy?: unknown }).destroy === "function"
+  )
+}
+
+const mountSolidRoot = (renderer: SolidRenderer, node: () => JSX.Element) => {
   let dispose: DisposeFn | undefined
   let disposeRequested = false
   let disposed = false
@@ -67,22 +78,31 @@ const mountSolidRoot = (renderer: CliRenderer, node: () => JSX.Element) => {
   }
 }
 
-export const render = async (node: () => JSX.Element, rendererOrConfig: CliRenderer | CliRendererConfig = {}) => {
+export const render = async (
+  node: () => JSX.Element,
+  rendererOrConfig: SolidRenderer | import("@opentui/core").CliRendererConfig = {},
+) => {
   const renderer =
-    rendererOrConfig instanceof CliRenderer
+    rendererOrConfig instanceof BrowserRenderer || isMountedRenderer(rendererOrConfig)
       ? rendererOrConfig
-      : await createCliRenderer({
+      : await (
+          await import("@opentui/core")
+        ).createCliRenderer({
           ...rendererOrConfig,
           onDestroy: () => {
             rendererOrConfig.onDestroy?.()
           },
         })
 
-  engine.attach(renderer)
+  engine.attach(renderer as any)
   mountSolidRoot(renderer, node)
 }
 
-export const testRender = async (node: () => JSX.Element, renderConfig: TestRendererOptions = {}) => {
+export const testRender = async (
+  node: () => JSX.Element,
+  renderConfig: import("@opentui/core/testing").TestRendererOptions = {},
+) => {
+  const { createTestRenderer } = await import("@opentui/core/testing")
   const testSetup = await createTestRenderer({
     ...renderConfig,
     onDestroy: () => {

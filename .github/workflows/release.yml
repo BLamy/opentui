@@ -103,6 +103,14 @@ jobs:
       version: ${{ needs.prepare.outputs.fullTag }}
       isDryRun: ${{ needs.prepare.outputs.isDryRun == 'true' }}
 
+  build-wasm:
+    name: Build Wasm
+    needs: [prepare, validate-version]
+    uses: ./.github/workflows/build-wasm.yml
+    with:
+      version: ${{ needs.prepare.outputs.fullTag }}
+      isDryRun: ${{ needs.prepare.outputs.isDryRun == 'true' }}
+
   # Build example executables
   build-examples:
     name: Build Examples
@@ -126,7 +134,7 @@ jobs:
   # Create GitHub release with assets
   github-release:
     name: Create GitHub Release
-    needs: [prepare, build-native, build-examples, npm-publish]
+    needs: [prepare, build-native, build-wasm, build-examples, npm-publish]
     runs-on: ubuntu-latest
 
     steps:
@@ -150,6 +158,7 @@ jobs:
 
           # Verify artifact directories exist
           test -d "artifacts/native-binaries-$FULL_TAG" || (echo "❌ native-binaries artifact directory not found!" && exit 1)
+          test -d "artifacts/browser-wasm-$FULL_TAG" || (echo "❌ browser-wasm artifact directory not found!" && exit 1)
           test -d "artifacts/example-executables-$FULL_TAG" || (echo "❌ example-executables artifact directory not found!" && exit 1)
 
           # Copy native binaries (unzip and rezip with versioned names)
@@ -177,6 +186,26 @@ jobs:
               fi
             fi
           done
+
+          cd "$WORK_DIR"
+
+          # Copy browser wasm (unzip and rezip with versioned name)
+          echo "Processing browser wasm..."
+          cd "artifacts/browser-wasm-$FULL_TAG"
+
+          test -f browser-wasm.zip || (echo "❌ browser-wasm.zip not found!" && exit 1)
+          unzip -q browser-wasm.zip
+
+          if [ -d "wasm" ]; then
+            cd wasm
+            zip -r "$WORK_DIR/release-assets/opentui-browser-wasm-v${FULL_TAG}.zip" .
+            cd ..
+
+            test -f "$WORK_DIR/release-assets/opentui-browser-wasm-v${FULL_TAG}.zip" || (echo "❌ Failed to create browser wasm release asset!" && exit 1)
+            echo "  ✅ opentui-browser-wasm-v${FULL_TAG}.zip created"
+          else
+            echo "❌ wasm directory not found after unzip!" && exit 1
+          fi
 
           cd "$WORK_DIR"
 
@@ -211,7 +240,7 @@ jobs:
           # Verify all expected release assets exist
           echo ""
           echo "Verifying all release assets..."
-          EXPECTED_ASSETS=10  # 6 native (darwin-x64, darwin-arm64, linux-x64, linux-arm64, windows-x64, windows-arm64) + 4 examples (no linux-arm64, no windows-arm64)
+          EXPECTED_ASSETS=11  # 6 native + 1 browser wasm + 4 examples
           ACTUAL_ASSETS=$(ls -1 release-assets/*.zip 2>/dev/null | wc -l | tr -d ' ')
 
           if [ "$ACTUAL_ASSETS" -ne "$EXPECTED_ASSETS" ]; then
@@ -222,6 +251,7 @@ jobs:
 
           echo "✅ All $ACTUAL_ASSETS release assets prepared:"
           echo "   - 6 native binaries (all platforms)"
+          echo "   - 1 browser wasm bundle"
           echo "   - 4 example executables (darwin-x64, darwin-arm64, linux-x64, windows-x64)"
           ls -lah release-assets/
 

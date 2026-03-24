@@ -29,19 +29,19 @@ The factory function does three things:
 
 ## Configuration options
 
-| Option                | Type               | Default   | Description                                                                        |
-| --------------------- | ------------------ | --------- | ---------------------------------------------------------------------------------- |
-| `exitOnCtrlC`         | `boolean`          | `true`    | Call `renderer.destroy()` when Ctrl+C is pressed                                   |
-| `exitSignals`         | `NodeJS.Signals[]` | see below | Signals that trigger cleanup ([details](/core-concepts/lifecycle#signal-handling)) |
-| `targetFps`           | `number`           | `30`      | Target frames per second for the render loop                                       |
-| `maxFps`              | `number`           | `60`      | Maximum FPS for immediate re-renders                                               |
-| `useMouse`            | `boolean`          | `true`    | Enable mouse input and tracking                                                    |
-| `autoFocus`           | `boolean`          | `true`    | Focus nearest focusable on left click                                              |
-| `enableMouseMovement` | `boolean`          | `true`    | Track mouse movement (not just clicks)                                             |
-| `useAlternateScreen`  | `boolean`          | `true`    | Use terminal alternate screen buffer                                               |
-| `consoleOptions`      | `ConsoleOptions`   | -         | Options for the built-in console overlay                                           |
-| `openConsoleOnError`  | `boolean`          | `true`    | Auto-open console when errors occur (dev only)                                     |
-| `onDestroy`           | `() => void`       | -         | Callback executed when renderer is destroyed                                       |
+| Option                | Type               | Default   | Description                                                                             |
+| --------------------- | ------------------ | --------- | --------------------------------------------------------------------------------------- |
+| `exitOnCtrlC`         | `boolean`          | `true`    | Call `renderer.destroy()` when Ctrl+C is pressed                                        |
+| `exitSignals`         | `NodeJS.Signals[]` | see below | Signals that trigger cleanup ([details](/docs/core-concepts/lifecycle#signal-handling)) |
+| `targetFps`           | `number`           | `30`      | Target frames per second for the render loop                                            |
+| `maxFps`              | `number`           | `60`      | Maximum FPS for immediate re-renders                                                    |
+| `useMouse`            | `boolean`          | `true`    | Enable mouse input and tracking                                                         |
+| `autoFocus`           | `boolean`          | `true`    | Focus nearest focusable on left click                                                   |
+| `enableMouseMovement` | `boolean`          | `true`    | Track mouse movement (not just clicks)                                                  |
+| `useAlternateScreen`  | `boolean`          | `true`    | Use terminal alternate screen buffer                                                    |
+| `consoleOptions`      | `ConsoleOptions`   | -         | Options for the built-in console overlay                                                |
+| `openConsoleOnError`  | `boolean`          | `true`    | Auto-open console when errors occur (dev only)                                          |
+| `onDestroy`           | `() => void`       | -         | Callback executed when renderer is destroyed                                            |
 
 ## The root renderable
 

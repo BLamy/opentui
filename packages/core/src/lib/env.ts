@@ -63,8 +63,21 @@ function normalizeBoolean(value: string): boolean {
   return ["true", "1", "on", "yes"].includes(lowerValue)
 }
 
+function getProcessEnv(): Record<string, string | boolean | number> | undefined {
+  if (typeof process === "undefined") {
+    return undefined
+  }
+
+  if (!process || typeof process !== "object" || !("env" in process)) {
+    return undefined
+  }
+
+  const { env } = process as { env?: Record<string, string | boolean | number> }
+  return env && typeof env === "object" ? env : undefined
+}
+
 function parseEnvValue(config: EnvVarConfig): string | boolean | number {
-  const envValue = process.env[config.name]
+  const envValue = getProcessEnv()?.[config.name]
 
   if (envValue === undefined && config.default !== undefined) {
     return config.default

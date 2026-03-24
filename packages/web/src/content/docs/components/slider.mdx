@@ -12,7 +12,7 @@ A draggable slider for continuous values. Supports vertical and horizontal orien
 
 ### Renderable API
 
-```typescript
+```ts example
 import { SliderRenderable, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -35,7 +35,7 @@ renderer.root.add(slider)
 
 ## Vertical slider
 
-```typescript
+```ts example
 const slider = new SliderRenderable(renderer, {
   orientation: "vertical",
   width: 2,

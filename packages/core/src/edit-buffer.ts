@@ -1,9 +1,10 @@
-import { resolveRenderLib, type LogicalCursor, type RenderLib } from "./zig.js"
-import { type Pointer } from "bun:ffi"
+import { resolveRenderLib, type RenderLib } from "./render-lib.js"
+import { type Pointer } from "./lib/ffi-runtime.js"
 import { type WidthMethod, type Highlight } from "./types.js"
 import { RGBA } from "./lib/RGBA.js"
 import { EventEmitter } from "events"
 import type { SyntaxStyle } from "./syntax-style.js"
+import type { LogicalCursor } from "./zig.js"
 
 export type { LogicalCursor }
 
@@ -13,7 +14,7 @@ export type { LogicalCursor }
  */
 export class EditBuffer extends EventEmitter {
   private static registry = new Map<number, EditBuffer>()
-  private static nativeEventsSubscribed = false
+  private static nativeEventsSubscribedLib: RenderLib | null = null
 
   private lib: RenderLib
   private bufferPtr: Pointer
@@ -43,8 +44,8 @@ export class EditBuffer extends EventEmitter {
   }
 
   private static subscribeToNativeEvents(lib: RenderLib): void {
-    if (EditBuffer.nativeEventsSubscribed) return
-    EditBuffer.nativeEventsSubscribed = true
+    if (EditBuffer.nativeEventsSubscribedLib === lib) return
+    EditBuffer.nativeEventsSubscribedLib = lib
 
     lib.onAnyNativeEvent((name: string, data: ArrayBuffer) => {
       const buffer = new Uint16Array(data)

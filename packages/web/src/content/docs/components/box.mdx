@@ -12,7 +12,7 @@ A container component with borders, background colors, and layout capabilities. 
 
 ### Renderable API
 
-```typescript
+```ts example
 import { BoxRenderable, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -31,7 +31,7 @@ renderer.root.add(panel)
 
 ### Construct API
 
-```typescript
+```ts example
 import { Box, Text, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -81,7 +81,7 @@ renderer.root.add(
 
 Add a title to the box border:
 
-```typescript
+```ts example
 const panel = new BoxRenderable(renderer, {
   id: "settings",
   width: 40,
@@ -110,7 +110,7 @@ const panel = new BoxRenderable(renderer, {
 
 Box works as a flex container for child elements:
 
-```typescript
+```ts example
 const container = Box(
   {
     flexDirection: "column",
@@ -131,7 +131,7 @@ const container = Box(
 
 Handle mouse interactions on the box:
 
-```typescript
+```ts example
 const button = new BoxRenderable(renderer, {
   id: "button",
   width: 12,
@@ -170,8 +170,10 @@ const button = new BoxRenderable(renderer, {
 
 ## Example: Card component
 
-```typescript
-import { Box, Text, t, bold, fg } from "@opentui/core"
+```ts example
+import { Box, Text, t, bold, fg, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
 
 function Card(props: { title: string; description: string }) {
   return Box(

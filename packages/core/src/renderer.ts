@@ -10,7 +10,7 @@ import {
   type WidthMethod,
 } from "./types.js"
 import { RGBA, parseColor, type ColorInput } from "./lib/RGBA.js"
-import type { Pointer } from "bun:ffi"
+import type { Pointer } from "./lib/ffi-runtime.js"
 import { OptimizedBuffer } from "./buffer.js"
 import { resolveRenderLib, type RenderLib } from "./zig.js"
 import { TerminalConsole, type ConsoleOptions, capture } from "./console.js"
@@ -22,7 +22,7 @@ import { destroySingleton, hasSingleton, singleton } from "./lib/singleton.js"
 import { getObjectsInViewport } from "./lib/objects-in-viewport.js"
 import { KeyHandler, InternalKeyHandler } from "./lib/KeyHandler.js"
 import { env, registerEnvVar } from "./lib/env.js"
-import { getTreeSitterClient } from "./lib/tree-sitter/index.js"
+import { scheduleNextMicrotask } from "./lib/schedule.js"
 import {
   createTerminalPalette,
   type TerminalPaletteDetector,
@@ -271,7 +271,6 @@ const rendererTracker = singleton("RendererTracker", () => {
         process.stdin.pause()
 
         if (hasSingleton("tree-sitter-client")) {
-          getTreeSitterClient().destroy()
           destroySingleton("tree-sitter-client")
         }
       }
@@ -626,7 +625,7 @@ export class CliRenderer extends EventEmitter implements RenderContext {
     this._keyHandler = new InternalKeyHandler()
     this._keyHandler.on("keypress", (event) => {
       if (this.exitOnCtrlC && event.name === "c" && event.ctrl) {
-        process.nextTick(() => {
+        scheduleNextMicrotask(() => {
           this.destroy()
         })
         return
@@ -790,7 +789,7 @@ export class CliRenderer extends EventEmitter implements RenderContext {
       const data = typeof chunk === "string" ? chunk : (chunk?.toString() ?? "")
       this.lib.writeOut(this.rendererPtr, data)
       if (typeof callback === "function") {
-        process.nextTick(callback)
+        scheduleNextMicrotask(callback)
       }
       return true
     }
@@ -821,7 +820,7 @@ export class CliRenderer extends EventEmitter implements RenderContext {
       const delay = Math.max(this.minTargetFrameTime - elapsed, 0)
 
       if (delay === 0) {
-        process.nextTick(() => this.activateFrame())
+        scheduleNextMicrotask(() => this.activateFrame())
         return
       }
 
@@ -1013,7 +1012,7 @@ export class CliRenderer extends EventEmitter implements RenderContext {
     }
 
     if (typeof callback === "function") {
-      process.nextTick(callback)
+      scheduleNextMicrotask(callback)
     }
 
     return true

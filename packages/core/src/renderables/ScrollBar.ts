@@ -1,5 +1,5 @@
 import type { OptimizedBuffer } from "../buffer.js"
-import { parseColor, RGBA, type ColorInput } from "../lib/index.js"
+import { parseColor, RGBA, type ColorInput } from "../lib/RGBA.js"
 import type { KeyEvent } from "../lib/KeyHandler.js"
 import { Renderable, type RenderableOptions } from "../Renderable.js"
 import type { RenderContext, Timeout } from "../types.js"

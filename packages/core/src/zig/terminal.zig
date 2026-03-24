@@ -309,7 +309,7 @@ pub fn enableDetectedFeatures(self: *Terminal, tty: anytype, use_kitty_keyboard:
         try self.setFocusTracking(tty, true);
     }
 
-    if (!self.state.color_scheme_updates) {
+    if (self.caps.color_scheme_updates and !self.state.color_scheme_updates) {
         try self.setColorSchemeUpdates(tty, true);
         try tty.writeAll(ansi.ANSI.colorSchemeRequest);
     }
@@ -333,6 +333,10 @@ fn checkEnvironmentOverrides(self: *Terminal) void {
 
     var env_map_storage: ?std.process.EnvMap = null;
     const env_map: *const std.process.EnvMap = self.opts.env_map orelse blk: {
+        if (builtin.os.tag == .freestanding) {
+            return;
+        }
+
         env_map_storage = std.process.getEnvMap(std.heap.page_allocator) catch |err| {
             logger.err("Failed to get environment map: {}", .{err});
             return;
@@ -485,6 +489,20 @@ fn checkEnvironmentOverrides(self: *Terminal) void {
     }
 }
 
+pub fn seedBrowserCapabilities(self: *Terminal) void {
+    self.caps.rgb = true;
+    self.caps.unicode = .unicode;
+    self.caps.bracketed_paste = true;
+    self.caps.focus_tracking = true;
+    self.caps.sync = true;
+    self.caps.hyperlinks = true;
+    self.caps.explicit_cursor_positioning = true;
+
+    const name = "ghostty-web";
+    @memcpy(self.term_info.name[0..name.len], name);
+    self.term_info.name_len = name.len;
+}
+
 // TODO: Allow pixel mouse mode to be enabled,
 // currently does not make sense and is not supported by higher levels
 pub fn setMouseMode(self: *Terminal, tty: anytype, enable: bool, enable_movement: bool) !void {
@@ -503,12 +521,14 @@ pub fn setMouseMode(self: *Terminal, tty: anytype, enable: bool, enable_movement
             // click/drag modes so they remain active.
             try tty.writeAll(ansi.ANSI.disableAnyEventTracking);
         }
+        try tty.writeAll(ansi.ANSI.disableSGRPixelMouseMode);
         try tty.writeAll(ansi.ANSI.enableMouseTracking);
         try tty.writeAll(ansi.ANSI.enableButtonEventTracking);
         if (enable_movement) {
             try tty.writeAll(ansi.ANSI.enableAnyEventTracking);
         }
         try tty.writeAll(ansi.ANSI.enableSGRMouseMode);
+        self.state.pixel_mouse = false;
     } else {
         self.state.mouse = false;
         self.state.pixel_mouse = false;
@@ -516,6 +536,7 @@ pub fn setMouseMode(self: *Terminal, tty: anytype, enable: bool, enable_movement
         try tty.writeAll(ansi.ANSI.disableButtonEventTracking);
         try tty.writeAll(ansi.ANSI.disableMouseTracking);
         try tty.writeAll(ansi.ANSI.disableSGRMouseMode);
+        try tty.writeAll(ansi.ANSI.disableSGRPixelMouseMode);
     }
 }
 
@@ -588,12 +609,14 @@ pub fn restoreTerminalModes(self: *Terminal, tty: anytype) !void {
         if (!self.state.mouse_movement) {
             try tty.writeAll(ansi.ANSI.disableAnyEventTracking);
         }
+        try tty.writeAll(ansi.ANSI.disableSGRPixelMouseMode);
         try tty.writeAll(ansi.ANSI.enableMouseTracking);
         try tty.writeAll(ansi.ANSI.enableButtonEventTracking);
         if (self.state.mouse_movement) {
             try tty.writeAll(ansi.ANSI.enableAnyEventTracking);
         }
         try tty.writeAll(ansi.ANSI.enableSGRMouseMode);
+        self.state.pixel_mouse = false;
     }
 
     // Re-enable focus tracking if active
@@ -629,7 +652,11 @@ pub fn restoreTerminalModes(self: *Terminal, tty: anytype) !void {
 /// Parsing these is not complete yet
 pub fn processCapabilityResponse(self: *Terminal, response: []const u8) void {
     // DECRPM responses
-    if (std.mem.indexOf(u8, response, "1016;2$y")) |_| {
+    if (std.mem.indexOf(u8, response, "1016;1$y") != null or
+        std.mem.indexOf(u8, response, "1016;2$y") != null or
+        std.mem.indexOf(u8, response, "1016;3$y") != null or
+        std.mem.indexOf(u8, response, "1016;4$y") != null)
+    {
         self.caps.sgr_pixels = true;
     }
     if (std.mem.indexOf(u8, response, "2027;2$y")) |_| {

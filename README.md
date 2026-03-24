@@ -9,6 +9,7 @@
 OpenTUI is a native terminal UI core written in Zig with TypeScript bindings. The native core exposes a C ABI and can be used from any language. OpenTUI powers [OpenCode](https://opencode.ai) in production today and will also power [terminal.shop](https://terminal.shop). It is an extensible core with a focus on correctness, stability, and high performance. It provides a component-based architecture with flexible layout capabilities, allowing you to create complex terminal applications.
 
 Docs: https://opentui.com/docs/getting-started
+Browser demo: https://opentui.com/workbench
 
 Quick start with [bun](https://bun.sh) and [create-tui](https://github.com/msmps/create-tui):
 
@@ -79,6 +80,7 @@ See the [Development Guide](packages/core/docs/development.md) for building, tes
 ### Documentation
 
 - [Website docs](https://opentui.com/docs/getting-started) - Guides and API references
+- [Browser Workbench](https://opentui.com/workbench) - Live OpenTUI demo running on the browser runtime
 - [Development Guide](packages/core/docs/development.md) - Building, testing, and local dev linking
 - [Getting Started](packages/core/docs/getting-started.md) - API and usage guide
 - [Environment Variables](packages/core/docs/env-vars.md) - Configuration options

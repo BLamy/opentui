@@ -39,6 +39,7 @@ const packageJson: PackageJson = JSON.parse(readFileSync(join(rootDir, "package.
 const args = process.argv.slice(2)
 const buildLib = args.find((arg) => arg === "--lib")
 const buildNative = args.find((arg) => arg === "--native")
+const buildWasm = args.find((arg) => arg === "--wasm")
 const isDev = args.includes("--dev")
 const buildAll = args.includes("--all") // Build for all platforms
 const gpaSafeStats = args.includes("--gpa-safe-stats")
@@ -52,8 +53,8 @@ const variants: Variant[] = [
   { platform: "win32", arch: "arm64" },
 ]
 
-if (!buildLib && !buildNative) {
-  console.error("Error: Please specify --lib, --native, or both")
+if (!buildLib && !buildNative && !buildWasm) {
+  console.error("Error: Please specify --lib, --native, --wasm, or a combination")
   process.exit(1)
 }
 
@@ -61,6 +62,20 @@ const getZigTarget = (platform: string, arch: string): string => {
   const platformMap: Record<string, string> = { darwin: "macos", win32: "windows", linux: "linux" }
   const archMap: Record<string, string> = { x64: "x86_64", arm64: "aarch64" }
   return `${archMap[arch] ?? arch}-${platformMap[platform] ?? platform}`
+}
+
+const getBrowserLibDir = (): string => join(rootDir, "src", "zig", "lib", "wasm32-freestanding")
+
+const findBrowserWasmFile = (): string | null => {
+  const browserLibDir = getBrowserLibDir()
+  for (const fileName of ["libopentui.wasm", "opentui.wasm"]) {
+    const candidate = join(browserLibDir, fileName)
+    if (existsSync(candidate)) {
+      return candidate
+    }
+  }
+
+  return null
 }
 
 const replaceLinks = (text: string): string => {
@@ -175,6 +190,38 @@ export default path;
   }
 }
 
+if (buildWasm) {
+  console.log(`Building browser wasm ${isDev ? "dev" : "prod"} artifact...`)
+
+  const zigArgs = ["build", `-Doptimize=${isDev ? "Debug" : "ReleaseFast"}`, "-Dbrowser"]
+  if (gpaSafeStats) {
+    zigArgs.push("-Dgpa-safe-stats=true")
+  }
+
+  const zigBuild: SpawnSyncReturns<Buffer> = spawnSync("zig", zigArgs, {
+    cwd: join(rootDir, "src", "zig"),
+    stdio: "inherit",
+  })
+
+  if (zigBuild.error) {
+    console.error("Error: Zig is not installed or not in PATH")
+    process.exit(1)
+  }
+
+  if (zigBuild.status !== 0) {
+    console.error("Error: Browser wasm build failed")
+    process.exit(1)
+  }
+
+  const wasmArtifact = findBrowserWasmFile()
+  if (!wasmArtifact) {
+    console.error(`Error: Browser wasm artifact was not found in ${getBrowserLibDir()}`)
+    process.exit(1)
+  }
+
+  console.log(`Built browser wasm: ${wasmArtifact}`)
+}
+
 if (buildLib) {
   console.log("Building library...")
 
@@ -195,6 +242,7 @@ if (buildLib) {
 
   const entryPoints: string[] = [
     packageJson.module,
+    "src/browser.ts",
     "src/3d.ts",
     "src/testing.ts",
     "src/runtime-plugin.ts",
@@ -256,6 +304,7 @@ if (buildLib) {
   console.log("Post-processing bundled files to fix duplicate exports...")
   const bundledFiles = [
     "dist/index.js",
+    "dist/browser.js",
     "dist/3d.js",
     "dist/testing.js",
     "dist/runtime-plugin.js",
@@ -324,6 +373,16 @@ if (buildLib) {
   copyAssets(join(treeSitterSrcDir, "assets"), join(distDir, "assets"))
   console.log("  Copied tree-sitter assets (*.wasm, *.scm) to dist/assets/")
 
+  const wasmArtifact = findBrowserWasmFile()
+  if (wasmArtifact) {
+    const browserAssetDir = join(distDir, "browser")
+    mkdirSync(browserAssetDir, { recursive: true })
+    copyFileSync(wasmArtifact, join(browserAssetDir, "opentui.wasm"))
+    console.log("  Copied browser wasm to dist/browser/opentui.wasm")
+  } else {
+    console.warn("  Browser wasm not found; skipping dist/browser/opentui.wasm")
+  }
+
   // Configure exports for multiple entry points
   const exports = {
     ".": {
@@ -341,6 +400,12 @@ if (buildLib) {
       require: "./testing.js",
       types: "./testing.d.ts",
     },
+    "./browser": {
+      import: "./browser.js",
+      require: "./browser.js",
+      types: "./browser.d.ts",
+    },
+    "./browser/opentui.wasm": "./browser/opentui.wasm",
     "./runtime-plugin": {
       import: "./runtime-plugin.js",
       require: "./runtime-plugin.js",

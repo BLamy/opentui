@@ -25,6 +25,11 @@ const SUPPORTED_TARGETS = [_]SupportedTarget{
     .{ .zig_target = "x86_64-windows-gnu", .output_name = "x86_64-windows", .description = "Windows x86_64" },
     .{ .zig_target = "aarch64-windows-gnu", .output_name = "aarch64-windows", .description = "Windows aarch64" },
 };
+const BROWSER_TARGET = SupportedTarget{
+    .zig_target = "wasm32-freestanding",
+    .output_name = "wasm32-freestanding",
+    .description = "WebAssembly freestanding",
+};
 
 const LIB_NAME = "opentui";
 const ROOT_SOURCE_FILE = "lib.zig";
@@ -95,6 +100,7 @@ pub fn build(b: *std.Build) void {
     const debug_use_llvm = b.option(bool, "debug-llvm", "Use LLVM backend for debug/test artifacts");
     const target_option = b.option([]const u8, "target", "Build for specific target (e.g., 'x86_64-linux-gnu').");
     const build_all = b.option(bool, "all", "Build for all supported targets") orelse false;
+    const build_browser = b.option(bool, "browser", "Build the browser wasm target") orelse false;
     const gpa_safe_stats = b.option(bool, "gpa-safe-stats", "Enable GPA safety checks for trustworthy allocator stats") orelse false;
     const build_options = b.addOptions();
     build_options.addOption(bool, "gpa_safe_stats", gpa_safe_stats);
@@ -108,6 +114,8 @@ pub fn build(b: *std.Build) void {
     } else if (build_all) {
         // Build all supported targets
         buildAllTargets(b, optimize, build_options);
+    } else if (build_browser) {
+        buildBrowserTarget(b, optimize, build_options);
     } else {
         // Build for native target only (default)
         buildNativeTarget(b, optimize, build_options);
@@ -178,6 +186,19 @@ pub fn build(b: *std.Build) void {
     });
     const run_debug = b.addRunArtifact(debug_exe);
     debug_step.dependOn(&run_debug.step);
+}
+
+fn buildBrowserTarget(b: *std.Build, optimize: std.builtin.OptimizeMode, build_options: *std.Build.Step.Options) void {
+    buildTarget(
+        b,
+        BROWSER_TARGET.zig_target,
+        BROWSER_TARGET.output_name,
+        BROWSER_TARGET.description,
+        optimize,
+        build_options,
+    ) catch |err| {
+        std.debug.print("Failed to build browser target {s}: {}\n", .{ BROWSER_TARGET.description, err });
+    };
 }
 
 fn buildAllTargets(b: *std.Build, optimize: std.builtin.OptimizeMode, build_options: *std.Build.Step.Options) void {
@@ -264,16 +285,33 @@ fn buildTarget(
         .target = target,
         .optimize = optimize,
     });
+    const is_wasm = target.result.cpu.arch == .wasm32 or target.result.cpu.arch == .wasm64;
+
+    if (is_wasm) {
+        module.single_threaded = true;
+    }
 
     applyDependencies(b, module, optimize, target, build_options);
 
-    const lib = b.addLibrary(.{
-        .name = LIB_NAME,
-        .root_module = module,
-        .linkage = .dynamic,
-    });
+    const artifact: *std.Build.Step.Compile = if (is_wasm) blk: {
+        const exe = b.addExecutable(.{
+            .name = LIB_NAME,
+            .root_module = module,
+        });
+        exe.entry = .disabled;
+        exe.rdynamic = true;
+        exe.export_memory = true;
+        break :blk exe;
+    } else blk: {
+        const lib = b.addLibrary(.{
+            .name = LIB_NAME,
+            .root_module = module,
+            .linkage = .dynamic,
+        });
+        break :blk lib;
+    };
 
-    const install_dir = b.addInstallArtifact(lib, .{
+    const install_dir = b.addInstallArtifact(artifact, .{
         .dest_dir = .{
             .override = .{
                 .custom = try std.fmt.allocPrint(b.allocator, "../lib/{s}", .{output_name}),

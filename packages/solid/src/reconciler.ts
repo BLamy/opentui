@@ -19,6 +19,7 @@ import {
 } from "@opentui/core"
 import { decodeHTML } from "entities"
 import { useContext } from "solid-js"
+import { scheduleNextMicrotask } from "../../core/src/lib/schedule.js"
 import { createRenderer } from "./renderer/index.js"
 import { getComponentCatalogue, RendererContext, SlotRenderable } from "./elements/index.js"
 import { getNextId } from "./utils/id-counter.js"
@@ -118,7 +119,7 @@ function _removeNode(parent: DomNode, node: DomNode): void {
 
   parent.remove(node.id)
 
-  process.nextTick(() => {
+  scheduleNextMicrotask(() => {
     if (node instanceof BaseRenderable && !node.parent) {
       node.destroyRecursively()
       return

@@ -79,6 +79,7 @@ pub const ANSI = struct {
     pub const disableAnyEventTracking = "\x1b[?1003l";
     pub const enableSGRMouseMode = "\x1b[?1006h";
     pub const disableSGRMouseMode = "\x1b[?1006l";
+    pub const disableSGRPixelMouseMode = "\x1b[?1016l";
     pub const mouseSetPixels = "\x1b[?1002;1003;1004;1016h";
 
     // Terminal capability queries

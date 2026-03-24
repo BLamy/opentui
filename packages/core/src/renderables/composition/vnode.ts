@@ -1,6 +1,5 @@
 import { isRenderable, Renderable, type RenderableOptions } from "../../Renderable.js"
 import type { RenderContext } from "../../types.js"
-import util from "node:util"
 
 export type VChild = VNode | Renderable | VChild[] | null | undefined | false
 
@@ -140,7 +139,7 @@ export function maybeMakeRenderable(
   if (isRenderable(node)) return node
   if (isVNode(node)) return instantiate(ctx, node)
   if (process.env.NODE_ENV !== "production") {
-    console.warn("maybeMakeRenderable received an invalid node", util.inspect(node, { depth: 2 }))
+    console.warn("maybeMakeRenderable received an invalid node", inspectNode(node))
   }
   return null
 }
@@ -286,4 +285,11 @@ export function delegate<NodeType extends VNode | Renderable | InstantiateFn<any
   if (!vnode || typeof vnode !== "object") return vnode
   vnode.__delegateMap = { ...(vnode.__delegateMap || {}), ...mapping }
   return vnode
+}
+function inspectNode(value: unknown): string {
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return String(value)
+  }
 }

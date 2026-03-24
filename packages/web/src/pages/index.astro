@@ -1,6 +1,7 @@
 ---
 import Base from "../layouts/Base.astro"
 import TuiSurface from "../components/TuiSurface.astro"
+import { withBase } from "../utils/base-path"
 
 const installCommands = {
   create: { cmd: "bun create", pkg: "tui" },
@@ -40,6 +41,10 @@ const features = [
     description: "Timeline API for smooth, performant terminal animations"
   },
 ]
+
+const homeHref = withBase("/")
+const docsHref = withBase("/docs/getting-started")
+const workbenchHref = withBase("/workbench")
 ---
 
 <Base title="OpenTUI - Terminal UIs">
@@ -47,10 +52,10 @@ const features = [
     <div class="landing-container">
       <!-- Header -->
       <header class="landing-header">
-        <a href="/" class="landing-logo">
+        <a href={homeHref} class="landing-logo">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect x="2" y="3" width="20" height="18" fill="currentColor" />
-            <rect x="6" y="8" width="3" height="8" fill="hsl(0, 20%, 99%)" />
+            <rect x="6" y="8" width="3" height="8" fill="var(--color-bg, #fcfcfc)" />
           </svg>
           OpenTUI
         </a>
@@ -71,14 +76,16 @@ const features = [
         </button>
         <nav class="landing-nav">
           <a href="https://github.com/anomalyco/opentui" target="_blank" rel="noopener noreferrer">GitHub</a>
-          <a href="/docs/getting-started">Docs</a>
+          <a href={docsHref}>Docs</a>
+          <a href={workbenchHref}>Workbench</a>
         </nav>
       </header>
 
       <!-- Mobile nav overlay -->
       <nav class="mobile-nav" id="landing-mobile-nav">
         <a href="https://github.com/anomalyco/opentui" target="_blank" rel="noopener noreferrer">GitHub</a>
-        <a href="/docs/getting-started">Docs</a>
+        <a href={docsHref}>Docs</a>
+        <a href={workbenchHref}>Workbench</a>
       </nav>
 
       <!-- Content -->
@@ -244,7 +251,7 @@ renderer.root.<span class="function">add</span>(
               </ul>
               
               <div class="what-actions">
-                <a href="/docs/getting-started" class="btn-dark">
+                <a href={docsHref} class="btn-dark">
                   <span>Read docs</span>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M6.5 12L17 12M13 16.5L17.5 12L13 7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"/>
@@ -262,7 +269,7 @@ renderer.root.<span class="function">add</span>(
         <!-- Footer -->
         <footer class="landing-footer">
           <div class="landing-footer-cell"><a href="https://github.com/anomalyco/opentui" target="_blank" rel="noopener noreferrer">GitHub</a></div>
-          <div class="landing-footer-cell"><a href="/docs/getting-started">Docs</a></div>
+          <div class="landing-footer-cell"><a href={docsHref}>Docs</a></div>
         </footer>
       </div>
     </div>
@@ -275,147 +282,5 @@ renderer.root.<span class="function">add</span>(
 </Base>
 
 <script>
-  const installCommands: Record<string, { cmd: string; pkg: string }> = {
-    create: { cmd: "bun create", pkg: "tui" },
-    manual: { cmd: "bun add", pkg: "@opentui/core" },
-    skill: { cmd: "npx skills add", pkg: "msmps/opentui-skill" },
-  }
-
-  // Tab switching
-  const tabs = document.querySelectorAll('.install-tab')
-  const commandBtn = document.getElementById('install-display') as HTMLButtonElement
-  
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      const key = tab.getAttribute('data-tab') as keyof typeof installCommands
-      const { cmd, pkg } = installCommands[key]
-      
-      // Update active tab
-      tabs.forEach(t => t.setAttribute('aria-selected', 'false'))
-      tab.setAttribute('aria-selected', 'true')
-      
-      // Update command display
-      if (commandBtn) {
-        const codeEl = commandBtn.querySelector('code')
-        if (codeEl) {
-          codeEl.innerHTML = `<span class="cmd">${cmd} </span><span class="highlight">${pkg}</span>`
-        }
-        commandBtn.setAttribute('data-command', `${cmd} ${pkg}`)
-      }
-    })
-  })
-
-  // Copy functionality - clicking the whole command button copies
-  if (commandBtn) {
-    commandBtn.addEventListener('click', async () => {
-      const command = commandBtn.getAttribute('data-command')
-      if (command) {
-        await navigator.clipboard.writeText(command)
-        const copyBtn = commandBtn.querySelector('.copy-btn')
-        if (copyBtn) {
-          copyBtn.classList.add('copied')
-          setTimeout(() => copyBtn.classList.remove('copied'), 1500)
-        }
-      }
-    })
-  }
-
-  // Code editor tab switching
-  const editorTabs = document.querySelectorAll('.code-editor-tab')
-  const editorPanels = document.querySelectorAll('.code-editor-body')
-  
-  editorTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      const tabId = tab.getAttribute('data-tab')
-      
-      editorTabs.forEach(t => t.setAttribute('aria-selected', 'false'))
-      tab.setAttribute('aria-selected', 'true')
-      
-      editorPanels.forEach(panel => {
-        panel.setAttribute('data-active', panel.getAttribute('data-panel') === tabId ? 'true' : 'false')
-      })
-    })
-  })
-
-  // Feature switching logic
-  const featureItems = document.querySelectorAll('.feature-item');
-  
-  featureItems.forEach(item => {
-    item.addEventListener('click', () => {
-      // Update UI
-      featureItems.forEach(i => {
-        i.classList.remove('active');
-        const bull = i.querySelector('.bullet');
-        if (bull) bull.textContent = '[*]';
-      });
-      item.classList.add('active');
-      const bull = item.querySelector('.bullet');
-      if (bull) bull.textContent = '[o]';
-      
-      // Dispatch event
-      const feature = item.getAttribute('data-feature');
-      window.dispatchEvent(new CustomEvent('feature-change', { detail: feature }));
-    });
-    
-    // Keyboard support
-    item.addEventListener('keydown', (e: any) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        (item as HTMLElement).click();
-      }
-    });
-  });
-
-  const codeCopyBtn = document.getElementById('code-copy-btn')
-  
-  if (codeCopyBtn) {
-    codeCopyBtn.addEventListener('click', async () => {
-      const activePanel = document.querySelector('.code-editor-body[data-active="true"]')
-      if (activePanel) {
-        const codeEl = activePanel.querySelector('pre code')
-        if (codeEl) {
-          const code = codeEl.textContent || ''
-          await navigator.clipboard.writeText(code)
-          
-          codeCopyBtn.classList.add('copied')
-          setTimeout(() => codeCopyBtn.classList.remove('copied'), 1500)
-        }
-      }
-    })
-  }
-
-  // Mobile menu toggle
-  const menuBtn = document.querySelector('.mobile-menu-btn')
-  const mobileNav = document.querySelector('.mobile-nav')
-
-  function openMenu() {
-    document.body.classList.add('mobile-nav-open')
-    menuBtn?.setAttribute('aria-expanded', 'true')
-    menuBtn?.setAttribute('aria-label', 'Close navigation menu')
-  }
-
-  function closeMenu() {
-    document.body.classList.remove('mobile-nav-open')
-    menuBtn?.setAttribute('aria-expanded', 'false')
-    menuBtn?.setAttribute('aria-label', 'Open navigation menu')
-  }
-
-  menuBtn?.addEventListener('click', () => {
-    const isOpen = document.body.classList.contains('mobile-nav-open')
-    if (isOpen) {
-      closeMenu()
-    } else {
-      openMenu()
-    }
-  })
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && document.body.classList.contains('mobile-nav-open')) {
-      closeMenu()
-    }
-  })
-
-  mobileNav?.querySelectorAll('a').forEach((link) => {
-    link.addEventListener('click', closeMenu)
-  })
+  import "../scripts/index-page.ts"
 </script>

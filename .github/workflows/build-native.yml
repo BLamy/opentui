@@ -42,6 +42,7 @@ jobs:
         run: |
           cd packages/core
           bun run build:native --all
+          bun run build:wasm
           bun run build:lib
           cd ../react
           bun run build
@@ -69,8 +70,9 @@ jobs:
           echo "Verifying dist packages exist..."
           test -d packages/core/dist || (echo "❌ core dist missing!" && exit 1)
           test -f packages/core/dist/package.json || (echo "❌ core dist/package.json missing!" && exit 1)
+          test -f packages/core/dist/browser/opentui.wasm || (echo "❌ core dist/browser/opentui.wasm missing!" && exit 1)
 
-          echo "✅ All required build outputs verified (6 platforms)"
+          echo "✅ All required build outputs verified (6 platforms + browser wasm)"
 
       # Create separate zips for each platform's native binaries
       - name: Package native binaries - darwin-x64

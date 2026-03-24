@@ -12,7 +12,7 @@ Add a line number gutter to renderables that provide line info, such as `CodeRen
 
 ### Renderable API
 
-```typescript
+```ts example
 import {
   CodeRenderable,
   LineNumberRenderable,
@@ -57,9 +57,50 @@ renderer.root.add(scrollbox)
 
 ## Line signs and colors
 
-```typescript
+```ts example
+import {
+  CodeRenderable,
+  LineNumberRenderable,
+  ScrollBoxRenderable,
+  SyntaxStyle,
+  RGBA,
+  createCliRenderer,
+} from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+const syntaxStyle = SyntaxStyle.fromStyles({
+  default: { fg: RGBA.fromHex("#E6EDF3") },
+})
+
+const code = new CodeRenderable(renderer, {
+  id: "code",
+  content: "const x = 1\nconst y = 2\nconst z = x + y\n",
+  filetype: "typescript",
+  syntaxStyle,
+  width: "100%",
+})
+
+const lineNumbers = new LineNumberRenderable(renderer, {
+  id: "code-lines",
+  target: code,
+  minWidth: 3,
+  paddingRight: 1,
+  fg: "#6b7280",
+  bg: "#161b22",
+})
+
 lineNumbers.setLineColor(3, "#2b6cb0")
 lineNumbers.setLineSign(3, { before: ">", beforeColor: "#2b6cb0" })
+
+const scrollbox = new ScrollBoxRenderable(renderer, {
+  id: "scrollbox",
+  width: 70,
+  height: 18,
+})
+
+scrollbox.add(lineNumbers)
+renderer.root.add(scrollbox)
 ```
 
 ## Construct API

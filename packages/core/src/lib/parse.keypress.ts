@@ -1,6 +1,7 @@
 // Copied from https://github.com/enquirer/enquirer/blob/36785f3399a41cd61e9d28d1eb9c2fcd73d69b4c/lib/keypress.js
-import { Buffer } from "node:buffer"
 import { parseKittyKeyboard } from "./parse.keypress-kitty.js"
+
+const KEYPRESS_DECODER = new TextDecoder()
 
 const metaKeyCodeRe = /^(?:\x1b)([a-zA-Z0-9])$/
 
@@ -139,15 +140,16 @@ export type ParseKeypressOptions = {
 
 const modifyOtherKeysRe = /^\x1b\[27;(\d+);(\d+)~$/
 
-export const parseKeypress = (s: Buffer | string = "", options: ParseKeypressOptions = {}): ParsedKey | null => {
+export const parseKeypress = (s: Uint8Array | string = "", options: ParseKeypressOptions = {}): ParsedKey | null => {
   let parts
 
-  if (Buffer.isBuffer(s)) {
+  if (s instanceof Uint8Array) {
     if (s[0]! > 127 && s[1] === undefined) {
-      ;(s[0] as unknown as number) -= 128
-      s = "\x1b" + String(s)
+      const normalized = new Uint8Array(s)
+      normalized[0] -= 128
+      s = "\x1b" + KEYPRESS_DECODER.decode(normalized)
     } else {
-      s = String(s)
+      s = KEYPRESS_DECODER.decode(s)
     }
   } else if (s !== undefined && typeof s !== "string") {
     s = String(s)

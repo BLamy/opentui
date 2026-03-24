@@ -12,7 +12,7 @@ Horizontal tab-based selection component with descriptions and scroll support. T
 
 ### Renderable API
 
-```typescript
+```ts example
 import { TabSelectRenderable, TabSelectRenderableEvents, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -38,7 +38,7 @@ renderer.root.add(tabs)
 
 ### Construct API
 
-```typescript
+```ts example
 import { TabSelect, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -73,25 +73,57 @@ When focused, the tab select responds to these keys:
 
 Emitted when the user presses Enter on a tab:
 
-```typescript
-import { TabSelectRenderableEvents, type TabSelectOption } from "@opentui/core"
+```ts example
+import { TabSelectRenderable, TabSelectRenderableEvents, type TabSelectOption, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+const tabs = new TabSelectRenderable(renderer, {
+  id: "tabs-events",
+  width: 60,
+  tabWidth: 20,
+  options: [
+    { name: "Home", description: "Dashboard and overview" },
+    { name: "Files", description: "Browse project files" },
+    { name: "Settings", description: "Update app preferences" },
+  ],
+})
 
 tabs.on(TabSelectRenderableEvents.ITEM_SELECTED, (index: number, option: TabSelectOption) => {
   console.log(`Selected tab ${index}: ${option.name}`)
   // Switch to the corresponding panel
 })
+
+tabs.focus()
+renderer.root.add(tabs)
 ```
 
 ### Selection Changed
 
 Emitted when the highlighted tab changes:
 
-```typescript
-import { TabSelectRenderableEvents, type TabSelectOption } from "@opentui/core"
+```ts example
+import { TabSelectRenderable, TabSelectRenderableEvents, type TabSelectOption, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+const tabs = new TabSelectRenderable(renderer, {
+  id: "tabs-hover",
+  width: 60,
+  tabWidth: 20,
+  options: [
+    { name: "Overview", description: "Summary panel" },
+    { name: "Logs", description: "Recent system output" },
+    { name: "Users", description: "Team members" },
+  ],
+})
 
 tabs.on(TabSelectRenderableEvents.SELECTION_CHANGED, (index: number, option: TabSelectOption) => {
   console.log(`Hovering: ${option.name}`)
 })
+
+tabs.focus()
+renderer.root.add(tabs)
 ```
 
 ## Properties
@@ -117,7 +149,7 @@ tabs.on(TabSelectRenderableEvents.SELECTION_CHANGED, (index: number, option: Tab
 
 ## Example: Tabbed Interface
 
-```typescript
+```ts example
 import { Box, Text, TabSelect, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -184,9 +216,23 @@ renderer.root.add(container)
 
 ## Programmatic Control
 
-```typescript
-// Get current tab index
+```ts example
+import { TabSelect, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+const tabs = TabSelect({
+  width: 60,
+  tabWidth: 20,
+  options: [
+    { name: "Overview", description: "Default landing tab" },
+    { name: "Tasks", description: "Pending work items" },
+    { name: "Activity", description: "Recent updates" },
+  ],
+})
+
 const currentIndex = tabs.getSelectedIndex()
+console.log("Currently selected tab:", currentIndex)
 
 // Set tab programmatically
 tabs.setSelectedIndex(1)
@@ -196,6 +242,9 @@ tabs.setOptions([
   { name: "New Tab 1", description: "Updated" },
   { name: "New Tab 2", description: "Also updated" },
 ])
+
+tabs.focus()
+renderer.root.add(tabs)
 ```
 
 ## Scroll Behavior

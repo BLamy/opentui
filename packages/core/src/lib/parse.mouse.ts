@@ -21,6 +21,7 @@ type ParsedMouseSequence = {
 
 export class MouseParser {
   private mouseButtonsPressed = new Set<number>()
+  private readonly latin1Decoder = new TextDecoder("latin1")
 
   private static readonly SCROLL_DIRECTIONS: Record<number, "up" | "down" | "left" | "right"> = {
     0: "up",
@@ -35,18 +36,17 @@ export class MouseParser {
 
   // Preserve raw byte values so X10 payload bytes >= 0x80 remain intact.
   // SGR sequences are ASCII digits + separators and are unaffected either way.
-  private decodeInput(data: Buffer | Uint8Array): string {
-    const buf = Buffer.isBuffer(data) ? data : Buffer.from(data.buffer, data.byteOffset, data.byteLength)
-    return buf.toString("latin1")
+  private decodeInput(data: Uint8Array): string {
+    return this.latin1Decoder.decode(data)
   }
 
-  public parseMouseEvent(data: Buffer | Uint8Array): RawMouseEvent | null {
+  public parseMouseEvent(data: Uint8Array): RawMouseEvent | null {
     const str = this.decodeInput(data)
     const parsed = this.parseMouseSequenceAt(str, 0)
     return parsed?.event ?? null
   }
 
-  public parseAllMouseEvents(data: Buffer | Uint8Array): RawMouseEvent[] {
+  public parseAllMouseEvents(data: Uint8Array): RawMouseEvent[] {
     const str = this.decodeInput(data)
     const events: RawMouseEvent[] = []
     let offset = 0

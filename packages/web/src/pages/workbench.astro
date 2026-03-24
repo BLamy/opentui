@@ -1,0 +1,291 @@
+---
+import Base from "../layouts/Base.astro"
+import { withBase } from "../utils/base-path"
+
+const homeHref = withBase("/")
+const docsHref = withBase("/docs/getting-started")
+const wasmUrl = withBase("/opentui/opentui.wasm")
+---
+
+<Base
+  title="OpenTUI Browser Workbench"
+  description="Experimental OpenTUI browser runtime powered by Zig WebAssembly and Ghostty Web."
+>
+  <main class="browser-workbench">
+    <section class="browser-workbench__intro">
+      <div class="browser-workbench__eyebrow">Experimental Runtime</div>
+      <div class="browser-workbench__copy">
+        <h1>OpenTUI in the browser</h1>
+        <p>
+          This workbench runs the Zig renderer as WebAssembly, pushes VT output into Ghostty Web, and keeps the
+          OpenTUI app itself in core primitives. It is intended as the workspace-first browser proving ground for
+          keyboard, mouse, resize, cursor, alt-screen, color, Unicode, clipboard, and theme hooks.
+        </p>
+      </div>
+      <div class="browser-workbench__actions">
+        <a href={homeHref} class="browser-workbench__link">Home</a>
+        <a href={docsHref} class="browser-workbench__link">Docs</a>
+        <a
+          href="https://github.com/anomalyco/opentui"
+          class="browser-workbench__link"
+          target="_blank"
+          rel="noreferrer"
+        >
+          GitHub
+        </a>
+      </div>
+    </section>
+
+    <section class="browser-workbench__shell">
+      <div class="browser-workbench__chrome">
+        <div class="browser-workbench__lights">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <div class="browser-workbench__meta">
+          <span>zig wasm</span>
+          <span>ghostty-web</span>
+          <span>@opentui/core/browser</span>
+        </div>
+      </div>
+
+      <div class="browser-workbench__surface" data-workbench-root data-wasm-url={wasmUrl}>
+        <div class="browser-workbench__status" data-workbench-status data-state="loading">
+          Loading browser runtime...
+        </div>
+        <div class="browser-workbench__terminal" data-workbench-terminal></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    import "../scripts/workbench.ts"
+  </script>
+</Base>
+
+<style>
+  .browser-workbench {
+    min-height: 100vh;
+    padding: 48px 28px 64px;
+    background:
+      radial-gradient(circle at top left, rgba(245, 171, 83, 0.18), transparent 28%),
+      radial-gradient(circle at top right, rgba(77, 198, 194, 0.18), transparent 24%),
+      linear-gradient(180deg, #f6efe2 0%, #efe4d2 100%);
+  }
+
+  .browser-workbench__intro,
+  .browser-workbench__shell {
+    width: min(1200px, 100%);
+    margin: 0 auto;
+  }
+
+  .browser-workbench__intro {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr) auto;
+    gap: 24px;
+    align-items: start;
+    margin-bottom: 28px;
+  }
+
+  .browser-workbench__eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #8d5d28;
+    padding-top: 8px;
+  }
+
+  .browser-workbench__copy h1 {
+    font-family: var(--font-mono);
+    font-size: clamp(28px, 3.8vw, 44px);
+    color: #111919;
+    margin-bottom: 10px;
+  }
+
+  .browser-workbench__copy p {
+    max-width: 76ch;
+    font-size: 15px;
+    line-height: 1.8;
+    color: #4a4b43;
+  }
+
+  .browser-workbench__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .browser-workbench__link {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #402d1d;
+    border: 1px solid rgba(64, 45, 29, 0.22);
+    border-radius: 999px;
+    padding: 10px 14px;
+    background: rgba(255, 248, 236, 0.72);
+    backdrop-filter: blur(10px);
+    text-decoration: none;
+  }
+
+  .browser-workbench__link:hover {
+    text-decoration: none;
+    background: rgba(255, 248, 236, 0.95);
+  }
+
+  .browser-workbench__shell {
+    background:
+      linear-gradient(180deg, rgba(17, 25, 33, 0.96), rgba(9, 15, 20, 0.98)),
+      linear-gradient(90deg, rgba(77, 198, 194, 0.06), transparent 30%, rgba(245, 171, 83, 0.08));
+    border: 1px solid rgba(16, 31, 40, 0.3);
+    border-radius: 28px;
+    box-shadow:
+      0 32px 80px rgba(29, 24, 18, 0.26),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+  }
+
+  .browser-workbench__chrome {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 18px;
+    background: rgba(255, 255, 255, 0.035);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .browser-workbench__lights {
+    display: flex;
+    gap: 8px;
+  }
+
+  .browser-workbench__lights span {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    display: block;
+  }
+
+  .browser-workbench__lights span:nth-child(1) {
+    background: #ff8c69;
+  }
+
+  .browser-workbench__lights span:nth-child(2) {
+    background: #f4c94c;
+  }
+
+  .browser-workbench__lights span:nth-child(3) {
+    background: #53c98d;
+  }
+
+  .browser-workbench__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+
+  .browser-workbench__meta span {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(233, 244, 248, 0.72);
+    border: 1px solid rgba(233, 244, 248, 0.12);
+    border-radius: 999px;
+    padding: 7px 10px;
+  }
+
+  .browser-workbench__surface {
+    position: relative;
+    min-height: 720px;
+    padding: 18px;
+    background:
+      linear-gradient(180deg, rgba(8, 12, 16, 0.28), transparent 28%),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+    background-size:
+      auto,
+      22px 22px,
+      22px 22px;
+  }
+
+  .browser-workbench__status {
+    position: absolute;
+    top: 22px;
+    left: 22px;
+    z-index: 2;
+    max-width: min(520px, calc(100% - 44px));
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.5;
+    letter-spacing: 0.04em;
+    color: rgba(242, 247, 249, 0.86);
+    padding: 11px 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(7, 10, 14, 0.78);
+    backdrop-filter: blur(14px);
+  }
+
+  .browser-workbench__status[data-state="ready"] {
+    color: rgba(161, 237, 197, 0.96);
+    border-color: rgba(97, 196, 140, 0.34);
+  }
+
+  .browser-workbench__status[data-state="error"] {
+    color: rgba(255, 190, 168, 0.96);
+    border-color: rgba(255, 128, 99, 0.34);
+  }
+
+  .browser-workbench__terminal {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: min(78vh, 820px);
+    box-sizing: border-box;
+    padding: 12px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(6, 10, 13, 0.92);
+    overflow: hidden;
+  }
+
+  .browser-workbench__terminal :global(canvas) {
+    display: block;
+    border-radius: 12px;
+  }
+
+  .browser-workbench__terminal:focus-visible {
+    outline: none;
+  }
+
+  @media (max-width: 900px) {
+    .browser-workbench {
+      padding: 28px 14px 40px;
+    }
+
+    .browser-workbench__intro {
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .browser-workbench__actions {
+      justify-content: flex-start;
+    }
+
+    .browser-workbench__surface {
+      min-height: 560px;
+      padding: 14px;
+    }
+
+    .browser-workbench__terminal {
+      height: min(70vh, 680px);
+    }
+  }
+</style>

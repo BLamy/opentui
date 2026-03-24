@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
 const seg_mod = @import("text-buffer-segment.zig");
 const iter_mod = @import("text-buffer-iterators.zig");
@@ -1095,6 +1096,10 @@ pub const UnifiedTextBuffer = struct {
     /// Load text from a file path (relative to cwd)
     /// The file content is allocated in the arena and will be freed when the buffer is destroyed
     pub fn loadFile(self: *Self, path: []const u8) TextBufferError!void {
+        if (builtin.target.os.tag == .freestanding) {
+            return TextBufferError.InvalidIndex;
+        }
+
         const file = std.fs.cwd().openFile(path, .{}) catch |err| {
             return switch (err) {
                 error.FileNotFound => TextBufferError.InvalidIndex,
@@ -1104,7 +1109,9 @@ pub const UnifiedTextBuffer = struct {
         };
         defer file.close();
 
-        const file_size = file.getEndPos() catch return TextBufferError.OutOfMemory;
+        const file_size = std.math.cast(usize, file.getEndPos() catch return TextBufferError.OutOfMemory) orelse {
+            return TextBufferError.OutOfMemory;
+        };
 
         self.clear();
 

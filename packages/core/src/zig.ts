@@ -43,6 +43,25 @@ import type {
   AllocatorStats,
 } from "./zig-structs.js"
 import { isBunfsPath } from "./lib/bunfs.js"
+import { setFfiRuntime } from "./lib/ffi-runtime.js"
+import { setRenderLib as setCoreRenderLib } from "./render-lib.js"
+
+setFfiRuntime({
+  ptr(value) {
+    if (value == null) {
+      return null
+    }
+
+    if (ArrayBuffer.isView(value)) {
+      return ptr(value)
+    }
+
+    return ptr(new Uint8Array(value))
+  },
+  toArrayBuffer(pointer, byteOffset = 0, byteLength) {
+    return toArrayBuffer(pointer, byteOffset, byteLength)
+  },
+})
 
 const module = await import(`@opentui/core-${process.platform}-${process.arch}/index.ts`)
 let targetLibPath = module.default
@@ -2806,8 +2825,8 @@ class FFIRenderLib implements RenderLib {
   public textBufferViewGetSelection(view: Pointer): { start: number; end: number } | null {
     const packedInfo = this.textBufferViewGetSelectionInfo(view)
 
-    // Check for no selection marker (0xFFFFFFFF_FFFFFFFF)
-    if (packedInfo === 0xffff_ffff_ffff_ffffn) {
+    // FFI can surface the all-ones sentinel as either unsigned max u64 or signed -1.
+    if (packedInfo === 0xffff_ffff_ffff_ffffn || packedInfo === -1n) {
       return null
     }
 
@@ -3428,7 +3447,7 @@ class FFIRenderLib implements RenderLib {
 
   public editorViewGetSelection(view: Pointer): { start: number; end: number } | null {
     const packedInfo = this.opentui.symbols.editorViewGetSelection(view)
-    if (packedInfo === 0xffff_ffff_ffff_ffffn) {
+    if (packedInfo === 0xffff_ffff_ffff_ffffn || packedInfo === -1n) {
       return null
     }
     const start = Number(packedInfo >> 32n)
@@ -3861,6 +3880,7 @@ export function resolveRenderLib(): RenderLib {
   if (!opentuiLib) {
     try {
       opentuiLib = new FFIRenderLib(opentuiLibPath)
+      setCoreRenderLib(opentuiLib as any)
     } catch (error) {
       throw new Error(
         `Failed to initialize OpenTUI render library: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -3873,4 +3893,5 @@ export function resolveRenderLib(): RenderLib {
 // Try eager loading
 try {
   opentuiLib = new FFIRenderLib(opentuiLibPath)
+  setCoreRenderLib(opentuiLib as any)
 } catch (error) {}
