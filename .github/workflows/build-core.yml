@@ -12,6 +12,13 @@ env:
   ZIG_GLOBAL_CACHE_DIR: ${{ github.workspace }}/.zig-global-cache
 
 jobs:
+  build-wasm:
+    name: Build Browser Wasm
+    uses: ./.github/workflows/build-wasm.yml
+    with:
+      version: ci-${{ github.sha }}
+      isDryRun: true
+
   build:
     name: Build Native Libraries
     runs-on: macos-latest
@@ -36,6 +43,15 @@ jobs:
         run: |
           cd packages/core
           bun run build:native --all
+
+      - name: Build browser wasm
+        run: |
+          cd packages/core
+          bun run build:wasm
+
+      - name: Verify browser wasm output
+        run: |
+          test -f packages/core/src/zig/lib/wasm32-freestanding/opentui.wasm || (echo "❌ browser wasm missing!" && exit 1)
 
       - name: Upload native artifacts
         uses: actions/upload-artifact@v4
@@ -107,14 +123,14 @@ jobs:
   # Gate job for branch protection
   build-complete:
     name: Core - Build and Test
-    needs: [test]
+    needs: [build-wasm, test]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Check test results
         run: |
-          if [ "${{ needs.test.result }}" != "success" ]; then
-            echo "Tests failed"
+          if [ "${{ needs.build-wasm.result }}" != "success" ] || [ "${{ needs.test.result }}" != "success" ]; then
+            echo "Core builds or tests failed"
             exit 1
           fi
-          echo "All tests passed"
+          echo "All core builds and tests passed"
