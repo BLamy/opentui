@@ -1,0 +1,74 @@
+name: Build Wasm
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "Version identifier for the wasm artifact"
+        required: true
+        type: string
+      isDryRun:
+        description: "Whether this is a dry run release"
+        required: false
+        type: boolean
+        default: false
+
+env:
+  ZIG_VERSION: 0.15.2
+  # Workaround for bug in Zig 0.15.2 (fixed in next version)
+  # https://github.com/ziglang/zig/issues/25805
+  ZIG_GLOBAL_CACHE_DIR: ${{ github.workspace }}/.zig-global-cache
+
+jobs:
+  build-wasm:
+    name: Build Browser Wasm
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build browser wasm
+        run: |
+          cd packages/core
+          bun run build:wasm
+
+      - name: Verify wasm output
+        run: |
+          set -e
+          echo "Checking for browser wasm artifact..."
+          test -f packages/core/src/zig/lib/wasm32-freestanding/opentui.wasm || (echo "❌ browser wasm missing!" && exit 1)
+          ls -lah packages/core/src/zig/lib/wasm32-freestanding/
+          echo "✅ Browser wasm verified"
+
+      - name: Package browser wasm
+        run: |
+          set -e
+          mkdir -p artifacts/wasm
+          cp packages/core/src/zig/lib/wasm32-freestanding/opentui.wasm artifacts/wasm/
+          cd artifacts
+          zip -r browser-wasm.zip wasm/
+          test -f browser-wasm.zip || (echo "❌ Failed to create browser-wasm.zip" && exit 1)
+          test -s browser-wasm.zip || (echo "❌ browser-wasm.zip is empty" && exit 1)
+          echo "✅ Browser wasm packaged successfully ($(du -h browser-wasm.zip | cut -f1))"
+
+      - name: Upload browser wasm artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-wasm-${{ inputs.version }}
+          path: artifacts/browser-wasm.zip
+          if-no-files-found: error
+          retention-days: 30
