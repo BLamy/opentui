@@ -1,7 +1,3 @@
-import "@xterm/xterm/css/xterm.css"
-
-import { FitAddon } from "@xterm/addon-fit"
-import { Terminal, type ITheme } from "@xterm/xterm"
 import {
   BoxRenderable,
   BrowserRenderEvents,
@@ -11,14 +7,19 @@ import {
   TextAttributes,
   createBrowserRenderer,
   loadBrowserRenderLib,
-  type BrowserTerminalHost,
-  type BrowserTerminalKey,
   type KeyEvent,
-  type MouseEvent,
 } from "@opentui/core/browser"
+
+import {
+  createBrowserTerminalSession,
+  type BrowserTerminalSession,
+  type BrowserTerminalTheme,
+} from "./browser-terminal-session"
+import { getWorkbenchEditorCursorPosition } from "./workbench-cursor"
 
 type ThemeMode = "dark" | "light"
 type LogTone = "info" | "accent" | "success" | "warn" | "error"
+type RenderableMouseEvent = Parameters<BoxRenderable["onMouseEvent"]>[0]
 
 interface WorkbenchAction {
   label: string
@@ -57,9 +58,9 @@ interface Palette {
 declare global {
   interface Window {
     __OPENTUI_BROWSER_WORKBENCH__?: {
-      term: Terminal
-      fitAddon: FitAddon
-      host: XtermBrowserTerminalHost
+      term: BrowserTerminalSession["term"]
+      fitAddon: BrowserTerminalSession["fitAddon"]
+      host: BrowserTerminalSession["host"]
       renderer: BrowserRenderer
       model: WorkbenchModel
     }
@@ -68,7 +69,7 @@ declare global {
 
 const STATUS_TEXT = {
   loading: "Loading browser runtime...",
-  ready: "Browser renderer live. Click into the terminal to interact.",
+  ready: "Ghostty Web browser renderer live. Click into the terminal to interact.",
   error:
     "Browser wasm could not be loaded. Run `cd packages/core && bun run build:wasm`, then `cd packages/web && bun run sync:core-wasm`.",
 } as const
@@ -130,7 +131,7 @@ function createPalette(mode: ThemeMode): Palette {
   }
 }
 
-function createXtermTheme(mode: ThemeMode, palette: Palette): ITheme {
+function createTerminalTheme(mode: ThemeMode, palette: Palette): BrowserTerminalTheme {
   return {
     background: toCssColor(palette.shellBg),
     foreground: toCssColor(palette.text),
@@ -349,9 +350,9 @@ class WorkbenchModel {
   }
 
   public pushLogBurst(): void {
-    this.log("Keyboard path confirmed: editor input routed through xterm.", "accent")
-    this.log("Mouse path confirmed: xterm SGR mouse data reached the OpenTUI host.", "info")
-    this.log("Resize path confirmed: FitAddon dimensions propagated back into the renderer.", "success")
+    this.log("Keyboard path confirmed: editor input routed through Ghostty Web.", "accent")
+    this.log("Mouse path confirmed: Ghostty Web SGR mouse data reached the OpenTUI host.", "info")
+    this.log("Resize path confirmed: Ghostty fit dimensions propagated back into the renderer.", "success")
   }
 
   public insertUnicodeSample(): void {
@@ -519,7 +520,7 @@ class WorkbenchModel {
   private seedLogs(): void {
     this.logs = [
       { tone: "accent", text: `${timestampLabel()}  Browser host boot sequence armed.` },
-      { tone: "info", text: `${timestampLabel()}  Waiting for Zig wasm and xterm.js to handshake.` },
+      { tone: "info", text: `${timestampLabel()}  Waiting for Zig wasm and Ghostty Web to handshake.` },
     ]
     this.logScrollTop = Math.max(0, this.logs.length - this.logViewportHeight)
   }
@@ -593,7 +594,12 @@ abstract class PanelRenderable extends BoxRenderable {
     buffer.drawText(labelText, this.contentX, this.contentY + row, this.model.palette.textMuted)
     const offset = Math.min(this.contentWidth - 1, cellLength(labelText) + 1)
     if (offset < this.contentWidth) {
-      buffer.drawText(truncateCells(value, this.contentWidth - offset), this.contentX + offset, this.contentY + row, valueColor)
+      buffer.drawText(
+        truncateCells(value, this.contentWidth - offset),
+        this.contentX + offset,
+        this.contentY + row,
+        valueColor,
+      )
     }
   }
 
@@ -606,24 +612,17 @@ class HeaderPanelRenderable extends PanelRenderable {
   }
 
   protected override renderContent(buffer: any): void {
-    this.drawLine(
-      buffer,
-      0,
-      "OpenTUI browser workbench",
-      this.model.palette.accent,
-      undefined,
-      TextAttributes.BOLD,
-    )
+    this.drawLine(buffer, 0, "OpenTUI browser workbench", this.model.palette.accent, undefined, TextAttributes.BOLD)
     this.drawLine(
       buffer,
       1,
-      `zig wasm -> VT stream -> xterm.js | ${this.model.workbenchSize.cols}x${this.model.workbenchSize.rows} | theme ${this.model.themeMode}`,
+      `zig wasm -> VT stream -> ghostty-web | ${this.model.workbenchSize.cols}x${this.model.workbenchSize.rows} | theme ${this.model.themeMode}`,
       this.model.palette.text,
     )
     this.drawLine(
       buffer,
       2,
-      `${this.model.runtimeState} | alt-screen on | TERM xterm-256color | COLORTERM truecolor`,
+      `${this.model.runtimeState} | alt-screen on | TERM xterm-256color | TERM_PROGRAM ghostty-web`,
       this.model.runtimeState === "error" ? this.model.palette.red : this.model.palette.cyan,
     )
   }
@@ -650,11 +649,7 @@ class SidebarPanelRenderable extends PanelRenderable {
 
       const isHovered = index === this.hoverIndex
       const isPressed = index === this.pressedIndex
-      const rowBg = isPressed
-        ? this.model.palette.accentSoft
-        : isHovered
-          ? this.model.palette.panelMuted
-          : undefined
+      const rowBg = isPressed ? this.model.palette.accentSoft : isHovered ? this.model.palette.panelMuted : undefined
 
       this.drawLine(
         buffer,
@@ -676,10 +671,16 @@ class SidebarPanelRenderable extends PanelRenderable {
       this.model.renderer?.hasSelection ? "active" : "idle",
       this.model.renderer?.hasSelection ? this.model.palette.accent : this.model.palette.textMuted,
     )
-    this.drawLabelValue(buffer, infoStart + 2, "focus", this.model.renderer?.currentFocusedRenderable?.id ?? "none", this.model.palette.cyan)
+    this.drawLabelValue(
+      buffer,
+      infoStart + 2,
+      "focus",
+      this.model.renderer?.currentFocusedRenderable?.id ?? "none",
+      this.model.palette.cyan,
+    )
   }
 
-  protected override onMouseEvent(event: MouseEvent): void {
+  protected override onMouseEvent(event: RenderableMouseEvent): void {
     if (event.type === "out") {
       this.hoverIndex = -1
       this.pressedIndex = -1
@@ -768,10 +769,19 @@ class EditorPanelRenderable extends PanelRenderable {
     }
 
     if (this.focused) {
-      const cursorScreenRow = this.model.cursorRow - this.model.editorScrollTop
-      if (cursorScreenRow >= 0 && cursorScreenRow < this.contentHeight) {
+      const cursorPosition = getWorkbenchEditorCursorPosition({
+        contentX: this.contentX,
+        contentY: this.contentY,
+        gutterWidth: this.gutterWidth,
+        cursorCol: this.model.cursorCol,
+        cursorRow: this.model.cursorRow,
+        editorScrollTop: this.model.editorScrollTop,
+        contentHeight: this.contentHeight,
+      })
+
+      if (cursorPosition) {
         this.ctx.setCursorStyle({ style: "line", blinking: true, color: this.model.palette.cursor, cursor: "text" })
-        this.ctx.setCursorPosition(this.contentX + this.gutterWidth + this.model.cursorCol, this.contentY + cursorScreenRow, true)
+        this.ctx.setCursorPosition(cursorPosition.x, cursorPosition.y, true)
       }
     }
   }
@@ -849,7 +859,7 @@ class EditorPanelRenderable extends PanelRenderable {
     return false
   }
 
-  protected override onMouseEvent(event: MouseEvent): void {
+  protected override onMouseEvent(event: RenderableMouseEvent): void {
     if (event.type === "over" || event.type === "move") {
       this.ctx.setMousePointer("text")
     }
@@ -923,9 +933,7 @@ class LogPanelRenderable extends PanelRenderable {
 
       const start = row === this.localSelection.startRow ? clamp(this.localSelection.startCol, 0, cellLength(line)) : 0
       const end =
-        row === this.localSelection.endRow
-          ? clamp(this.localSelection.endCol, 0, cellLength(line))
-          : cellLength(line)
+        row === this.localSelection.endRow ? clamp(this.localSelection.endCol, 0, cellLength(line)) : cellLength(line)
 
       selected.push(sliceCells(line, start, Math.max(start, end)))
     }
@@ -959,7 +967,7 @@ class LogPanelRenderable extends PanelRenderable {
     }
   }
 
-  protected override onMouseEvent(event: MouseEvent): void {
+  protected override onMouseEvent(event: RenderableMouseEvent): void {
     if (event.type === "over" || event.type === "move") {
       this.ctx.setMousePointer("text")
     }
@@ -976,10 +984,14 @@ class LogPanelRenderable extends PanelRenderable {
   }
 
   private getVisibleLogs(): string[] {
-    return this.model.logs.slice(this.model.logScrollTop, this.model.logScrollTop + this.contentHeight).map((entry) => entry.text)
+    return this.model.logs
+      .slice(this.model.logScrollTop, this.model.logScrollTop + this.contentHeight)
+      .map((entry) => entry.text)
   }
 
-  private selectionFromGlobal(selection: any): { startRow: number; endRow: number; startCol: number; endCol: number } | null {
+  private selectionFromGlobal(
+    selection: any,
+  ): { startRow: number; endRow: number; startCol: number; endCol: number } | null {
     if (!selection?.isActive) {
       return null
     }
@@ -1067,15 +1079,31 @@ class DragPadRenderable extends PanelRenderable {
 
   protected override renderContent(buffer: any): void {
     for (let row = 0; row < this.contentHeight; row += 1) {
-      const pattern = truncateCells(row % 2 === 0 ? "· · · · · · · · · · · · · · · · ·" : "  ·   ·   ·   ·   ·   ·   ·   ·", this.contentWidth)
+      const pattern = truncateCells(
+        row % 2 === 0 ? "· · · · · · · · · · · · · · · · ·" : "  ·   ·   ·   ·   ·   ·   ·   ·",
+        this.contentWidth,
+      )
       this.drawLine(buffer, row, pattern, this.model.palette.textMuted)
     }
 
     const tokenX = this.contentX + this.model.dragToken.x
     const tokenY = this.contentY + this.model.dragToken.y
     const tokenLabel = truncateCells("[ drag me ]", this.model.dragToken.width)
-    buffer.fillRect(tokenX, tokenY, Math.max(tokenLabel.length, this.model.dragToken.width), 1, this.model.palette.chipBg)
-    buffer.drawText(tokenLabel, tokenX, tokenY, this.model.palette.chipFg, this.model.palette.chipBg, TextAttributes.BOLD)
+    buffer.fillRect(
+      tokenX,
+      tokenY,
+      Math.max(tokenLabel.length, this.model.dragToken.width),
+      1,
+      this.model.palette.chipBg,
+    )
+    buffer.drawText(
+      tokenLabel,
+      tokenX,
+      tokenY,
+      this.model.palette.chipFg,
+      this.model.palette.chipBg,
+      TextAttributes.BOLD,
+    )
 
     this.drawLine(buffer, Math.max(0, this.contentHeight - 2), this.model.dragStatus, this.model.palette.cyan)
     this.drawLine(
@@ -1086,7 +1114,7 @@ class DragPadRenderable extends PanelRenderable {
     )
   }
 
-  protected override onMouseEvent(event: MouseEvent): void {
+  protected override onMouseEvent(event: RenderableMouseEvent): void {
     if (event.type === "out") {
       this.ctx.setMousePointer("default")
       return
@@ -1146,7 +1174,10 @@ class DragPadRenderable extends PanelRenderable {
 }
 
 class FooterPanelRenderable extends PanelRenderable {
-  constructor(model: WorkbenchModel, private readonly wasmUrl: string) {
+  constructor(
+    model: WorkbenchModel,
+    private readonly wasmUrl: string,
+  ) {
     super(model, { title: "Notes", height: 5, shouldFill: true })
   }
 
@@ -1169,240 +1200,39 @@ class FooterPanelRenderable extends PanelRenderable {
   }
 }
 
-class XtermBrowserHost implements BrowserTerminalHost {
-  private readonly dataHandlers = new Set<(data: string) => void>()
-  private readonly keyHandlers = new Set<(key: BrowserTerminalKey) => void>()
-  private readonly resizeHandlers = new Set<(size: { cols: number; rows: number }) => void>()
-  private readonly focusHandlers = new Set<(focused: boolean) => void>()
-  private readonly themeHandlers = new Set<(mode: ThemeMode) => void>()
-  private readonly resizeObserver: ResizeObserver
-  private readonly mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
-  private readonly disposables: Array<{ dispose(): void }> = []
-  private currentThemeMode: ThemeMode
-  private readonly focusInHandler: () => void
-  private readonly focusOutHandler: (event: FocusEvent) => void
-  private readonly keyDownHandler: (event: KeyboardEvent) => void
-  private readonly themeChangeHandler: (event: MediaQueryListEvent) => void
-
-  constructor(
-    private readonly term: Terminal,
-    private readonly fitAddon: FitAddon,
-    private readonly surface: HTMLElement,
-    themeMode: ThemeMode,
-  ) {
-    this.currentThemeMode = themeMode
-
-    this.disposables.push(
-      this.term.onData((data) => {
-        for (const handler of this.dataHandlers) {
-          handler(data)
-        }
-      }),
-    )
-
-    this.disposables.push(
-      this.term.onResize(({ cols, rows }) => {
-        const size = { cols, rows }
-        for (const handler of this.resizeHandlers) {
-          handler(size)
-        }
-      }),
-    )
-
-    this.focusInHandler = () => {
-      for (const handler of this.focusHandlers) {
-        handler(true)
-      }
-    }
-
-    this.focusOutHandler = (event: FocusEvent) => {
-      if (event.relatedTarget instanceof Node && this.surface.contains(event.relatedTarget)) {
-        return
-      }
-
-      for (const handler of this.focusHandlers) {
-        handler(false)
-      }
-    }
-
-    this.keyDownHandler = (event: KeyboardEvent) => {
-      if (!this.surface.contains(event.target as Node | null)) {
-        return
-      }
-
-      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "c") {
-        event.preventDefault()
-        event.stopPropagation()
-
-        const key: BrowserTerminalKey = {
-          name: "c",
-          ctrl: event.ctrlKey,
-          meta: event.metaKey,
-          shift: true,
-          option: event.altKey,
-          sequence: event.key.length === 1 ? event.key : "C",
-          number: false,
-          raw: event.key.length === 1 ? event.key : "C",
-          eventType: "press",
-          source: "raw",
-          code: event.code,
-          super: false,
-          hyper: false,
-          capsLock: event.getModifierState("CapsLock"),
-          numLock: event.getModifierState("NumLock"),
-          repeated: event.repeat,
-        }
-
-        for (const handler of this.keyHandlers) {
-          handler(key)
-        }
-      }
-    }
-
-    this.themeChangeHandler = (event: MediaQueryListEvent) => {
-      this.currentThemeMode = event.matches ? "dark" : "light"
-      for (const handler of this.themeHandlers) {
-        handler(this.currentThemeMode)
-      }
-    }
-
-    this.surface.addEventListener("focusin", this.focusInHandler)
-    this.surface.addEventListener("focusout", this.focusOutHandler)
-    this.surface.addEventListener("keydown", this.keyDownHandler, true)
-    this.mediaQuery.addEventListener("change", this.themeChangeHandler)
-
-    this.resizeObserver = new ResizeObserver(() => {
-      this.fit()
-    })
-    this.resizeObserver.observe(this.surface)
-  }
-
-  public fit(): void {
-    this.fitAddon.fit()
-  }
-
-  public getSize(): { cols: number; rows: number } {
-    return { cols: this.term.cols, rows: this.term.rows }
-  }
-
-  public write(data: string): void {
-    this.term.write(data)
-  }
-
-  public onData(handler: (data: string) => void): () => void {
-    this.dataHandlers.add(handler)
-    return () => this.dataHandlers.delete(handler)
-  }
-
-  public onResize(handler: (size: { cols: number; rows: number }) => void): () => void {
-    this.resizeHandlers.add(handler)
-    return () => this.resizeHandlers.delete(handler)
-  }
-
-  public onKey(handler: (key: BrowserTerminalKey) => void): () => void {
-    this.keyHandlers.add(handler)
-    return () => this.keyHandlers.delete(handler)
-  }
-
-  public onFocusChange(handler: (focused: boolean) => void): () => void {
-    this.focusHandlers.add(handler)
-    return () => this.focusHandlers.delete(handler)
-  }
-
-  public onThemeModeChange(handler: (mode: ThemeMode) => void): () => void {
-    this.themeHandlers.add(handler)
-    handler(this.currentThemeMode)
-    return () => this.themeHandlers.delete(handler)
-  }
-
-  public copy(text: string): Promise<void> {
-    if (!navigator.clipboard?.writeText) {
-      return Promise.reject(new Error("Clipboard API unavailable"))
-    }
-
-    return navigator.clipboard.writeText(text)
-  }
-
-  public setTitle(title: string): void {
-    document.title = title
-  }
-
-  public destroy(): void {
-    for (const disposable of this.disposables) {
-      disposable.dispose()
-    }
-    this.resizeObserver.disconnect()
-    this.surface.removeEventListener("focusin", this.focusInHandler)
-    this.surface.removeEventListener("focusout", this.focusOutHandler)
-    this.surface.removeEventListener("keydown", this.keyDownHandler, true)
-    this.mediaQuery.removeEventListener("change", this.themeChangeHandler)
-  }
+type WorkbenchRuntimeSession = BrowserTerminalSession & {
+  renderer: BrowserRenderer
 }
+
+let renderLibPromise: Promise<void> | null = null
 
 function setStatus(statusElement: HTMLElement, state: "loading" | "ready" | "error", detail?: string): void {
   statusElement.dataset.state = state
   statusElement.textContent = detail ?? STATUS_TEXT[state]
 }
 
-async function bootstrapWorkbench(): Promise<void> {
-  const root = document.querySelector<HTMLElement>("[data-workbench-root]")
-  const terminalElement = document.querySelector<HTMLElement>("[data-workbench-terminal]")
-  const statusElement = document.querySelector<HTMLElement>("[data-workbench-status]")
+async function ensureRenderLib(wasmUrl: string): Promise<void> {
+  if (!renderLibPromise) {
+    renderLibPromise = loadBrowserRenderLib({ wasmUrl }).then(() => undefined)
+  }
 
-  if (!root || !terminalElement || !statusElement) {
+  await renderLibPromise
+}
+
+function destroyWorkbenchSession(session: WorkbenchRuntimeSession | null): void {
+  if (!session) {
     return
   }
 
-  const themeMode: ThemeMode = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
-  const model = new WorkbenchModel(themeMode)
-  const fitAddon = new FitAddon()
-  const term = new Terminal({
-    allowTransparency: true,
-    cursorBlink: true,
-    fontFamily: '"IBM Plex Mono", ui-monospace, monospace',
-    fontSize: 14,
-    lineHeight: 1.18,
-    letterSpacing: 0,
-    convertEol: false,
-    scrollback: 1500,
-    theme: createXtermTheme(themeMode, model.palette),
-  })
+  session.renderer.destroy()
+  session.destroy()
+}
 
-  term.loadAddon(fitAddon)
-  term.open(terminalElement)
-
-  const host = new XtermBrowserHost(term, fitAddon, terminalElement, themeMode)
-  host.fit()
-  term.focus()
-
-  const wasmUrl = root.dataset.wasmUrl ?? "/opentui/opentui.wasm"
-  setStatus(statusElement, "loading")
-
-  try {
-    await loadBrowserRenderLib({ wasmUrl })
-  } catch (error) {
-    model.setRuntimeState("error")
-    const message = error instanceof Error ? error.message : STATUS_TEXT.error
-    setStatus(statusElement, "error", `${STATUS_TEXT.error} (${message})`)
-    term.writeln("OpenTUI browser workbench")
-    term.writeln("")
-    term.writeln("The browser wasm runtime is missing or failed to load.")
-    term.writeln("Run: cd packages/core && bun run build:wasm")
-    term.writeln("Then: cd packages/web && bun run sync:core-wasm")
-    return
-  }
-
-  const renderer = await createBrowserRenderer(host, {
-    useAlternateScreen: true,
-    backgroundColor: model.palette.shellBg,
-    onDestroy: () => host.destroy(),
-  })
-
-  model.attachRenderer(renderer)
-  model.setRuntimeState("ready")
-  renderer.setTerminalTitle(model.terminalTitle)
-  renderer.setBackgroundColor(model.palette.shellBg)
-
+function mountWorkbenchTree(
+  model: WorkbenchModel,
+  renderer: BrowserRenderer,
+  wasmUrl: string,
+): { editor: EditorPanelRenderable } {
   const shell = new BoxRenderable(renderer, {
     id: "workbench-shell",
     width: "100%",
@@ -1489,53 +1319,163 @@ async function bootstrapWorkbench(): Promise<void> {
   right.add(logPanel)
   renderer.root.add(shell)
 
-  renderer.on(BrowserRenderEvents.RESIZE, (width: number, height: number) => {
-    model.workbenchSize = { cols: width, rows: height }
-    model.log(`Resize ${width}x${height}.`, "info")
+  return { editor }
+}
+
+async function createWorkbenchSession(
+  terminalElement: HTMLElement,
+  wasmUrl: string,
+  themeMode: ThemeMode,
+  palette: Palette,
+  autoFocus: boolean,
+): Promise<WorkbenchRuntimeSession> {
+  const terminalSession = await createBrowserTerminalSession({
+    surface: terminalElement,
+    themeMode,
+    allowTransparency: true,
+    cursorBlink: true,
+    fontFamily: '"IBM Plex Mono", ui-monospace, monospace',
+    fontSize: 14,
+    scrollback: 1500,
+    theme: createTerminalTheme(themeMode, palette),
+    autoFocus,
   })
 
-  renderer.on(BrowserRenderEvents.FOCUS, () => {
-    model.log("Terminal focus restored.", "success")
-  })
+  try {
+    await ensureRenderLib(wasmUrl)
 
-  renderer.on(BrowserRenderEvents.BLUR, () => {
-    model.log("Terminal lost focus.", "warn")
-  })
+    const renderer = await createBrowserRenderer(terminalSession.host, {
+      useAlternateScreen: true,
+      backgroundColor: palette.shellBg,
+    })
 
-  renderer.on(BrowserRenderEvents.THEME_MODE, (mode: ThemeMode) => {
-    model.setThemeMode(mode)
-    term.options.theme = createXtermTheme(mode, model.palette)
-    renderer.setBackgroundColor(model.palette.shellBg)
-    model.log(`Theme mode changed to ${mode}.`, "accent")
-  })
-
-  renderer.on(BrowserRenderEvents.SELECTION, () => {
-    const selection = renderer.getSelection()?.getSelectedText().trim()
-    if (selection) {
-      model.log(`Selection updated (${cellLength(selection)} cells).`, "accent")
-    }
-  })
-
-  if (import.meta.env.DEV) {
-    window.__OPENTUI_BROWSER_WORKBENCH__ = {
-      term,
-      fitAddon,
-      host,
+    return {
+      ...terminalSession,
       renderer,
-      model,
     }
+  } catch (error) {
+    terminalSession.destroy()
+    throw error
+  }
+}
+
+async function bootstrapWorkbench(): Promise<void> {
+  const root = document.querySelector<HTMLElement>("[data-workbench-root]")
+  const terminalElement = document.querySelector<HTMLElement>("[data-workbench-terminal]")
+  const statusElement = document.querySelector<HTMLElement>("[data-workbench-status]")
+
+  if (!root || !terminalElement || !statusElement) {
+    return
   }
 
-  model.log("Browser renderer mounted on the xterm alternate screen.", "success")
-  setStatus(statusElement, "ready")
-  editor.focus()
-  term.focus()
+  const initialThemeMode: ThemeMode = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+  const model = new WorkbenchModel(initialThemeMode)
+  const wasmUrl = root.dataset.wasmUrl ?? "/opentui/opentui.wasm"
+  let currentSession: WorkbenchRuntimeSession | null = null
+  let mountCounter = 0
+
+  const applyWorkbenchSession = (session: WorkbenchRuntimeSession, reason: "initial" | "theme"): void => {
+    model.attachRenderer(session.renderer)
+    model.setThemeMode(session.themeMode)
+    model.setRuntimeState("ready")
+
+    session.renderer.setTerminalTitle(model.terminalTitle)
+    session.renderer.setBackgroundColor(model.palette.shellBg)
+
+    const { editor } = mountWorkbenchTree(model, session.renderer, wasmUrl)
+    model.focusEditor = () => editor.focus()
+
+    session.renderer.on(BrowserRenderEvents.RESIZE, (width: number, height: number) => {
+      model.workbenchSize = { cols: width, rows: height }
+      model.log(`Resize ${width}x${height}.`, "info")
+    })
+
+    session.renderer.on(BrowserRenderEvents.FOCUS, () => {
+      model.log("Terminal focus restored.", "success")
+    })
+
+    session.renderer.on(BrowserRenderEvents.BLUR, () => {
+      model.log("Terminal lost focus.", "warn")
+    })
+
+    session.renderer.on(BrowserRenderEvents.THEME_MODE, (mode: ThemeMode) => {
+      if (mode === session.themeMode) {
+        return
+      }
+
+      model.log(`Theme mode changed to ${mode}. Reconnecting Ghostty Web.`, "accent")
+      void mount(mode, "theme").catch((error) => {
+        const message = error instanceof Error ? error.message : "Unknown Ghostty remount error."
+        model.log(`Ghostty remount failed: ${message}`, "error")
+        setStatus(statusElement, "error", `Ghostty theme refresh failed. (${message})`)
+      })
+    })
+
+    session.renderer.on(BrowserRenderEvents.SELECTION, () => {
+      const selection = session.renderer.getSelection()?.getSelectedText().trim()
+      if (selection) {
+        model.log(`Selection updated (${cellLength(selection)} cells).`, "accent")
+      }
+    })
+
+    if (import.meta.env.DEV) {
+      window.__OPENTUI_BROWSER_WORKBENCH__ = {
+        term: session.term,
+        fitAddon: session.fitAddon,
+        host: session.host,
+        renderer: session.renderer,
+        model,
+      }
+    }
+
+    model.log(
+      reason === "theme"
+        ? "Ghostty Web surface refreshed for the new theme."
+        : "Browser renderer mounted on the Ghostty Web alternate screen.",
+      "success",
+    )
+    setStatus(statusElement, "ready")
+    editor.focus()
+    session.term.focus()
+  }
+
+  const mount = async (themeMode: ThemeMode, reason: "initial" | "theme"): Promise<void> => {
+    const mountId = ++mountCounter
+    const palette = createPalette(themeMode)
+    const autoFocus =
+      reason === "initial" ? true : document.hasFocus() && terminalElement.contains(document.activeElement)
+
+    setStatus(
+      statusElement,
+      "loading",
+      reason === "theme" ? `Refreshing Ghostty Web for ${themeMode} mode…` : STATUS_TEXT.loading,
+    )
+
+    const nextSession = await createWorkbenchSession(terminalElement, wasmUrl, themeMode, palette, autoFocus)
+
+    if (mountId !== mountCounter) {
+      destroyWorkbenchSession(nextSession)
+      return
+    }
+
+    const previousSession = currentSession
+    currentSession = nextSession
+    applyWorkbenchSession(nextSession, reason)
+    destroyWorkbenchSession(previousSession)
+  }
+
+  try {
+    await mount(initialThemeMode, "initial")
+  } catch (error) {
+    model.setRuntimeState("error")
+    const message = error instanceof Error ? error.message : STATUS_TEXT.error
+    setStatus(statusElement, "error", `${STATUS_TEXT.error} (${message})`)
+  }
 
   window.addEventListener(
     "beforeunload",
     () => {
-      renderer.destroy()
-      term.dispose()
+      destroyWorkbenchSession(currentSession)
     },
     { once: true },
   )

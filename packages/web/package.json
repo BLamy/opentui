@@ -18,10 +18,9 @@
     "@opentui/core": "workspace:*",
     "@opentui/react": "workspace:*",
     "@opentui/solid": "workspace:*",
-    "@xterm/addon-fit": "^0.11.0",
-    "@xterm/xterm": "^6.0.0",
     "astro": "5.10.2",
     "babel-preset-solid": "1.9.10",
+    "ghostty-web": "^0.3.0",
     "monaco-editor": "^0.55.1",
     "react": "^19.1.1",
     "solid-js": "^1.9.10"

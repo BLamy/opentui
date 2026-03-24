@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 
 import { OptimizedBuffer } from "../buffer.js"
-import { BrowserRenderEvents, createBrowserRenderer, type BrowserTerminalHost, type BrowserTerminalKey } from "./renderer.js"
+import {
+  BrowserRenderEvents,
+  createBrowserRenderer,
+  type BrowserTerminalHost,
+  type BrowserTerminalKey,
+} from "./renderer.js"
 
 type ThemeMode = "dark" | "light"
 
@@ -211,6 +216,7 @@ describe("BrowserRenderer", () => {
 
     expect(env.get("TERM")).toBe("xterm-256color")
     expect(env.get("COLORTERM")).toBe("truecolor")
+    expect(env.get("TERM_PROGRAM")).toBe("ghostty-web")
     expect(host.writes).toEqual(["frame:1"])
 
     renderer.destroy()
@@ -252,9 +258,31 @@ describe("BrowserRenderer", () => {
       keys.push({ name: event.name, ctrl: event.ctrl, meta: event.meta, shift: event.shift })
     })
 
-    host.emitKey(createSyntheticKey({ name: "backspace", ctrl: false, meta: false, shift: false, sequence: "\x7f", raw: "\x7f", code: "Backspace" }))
-    host.emitKey(createSyntheticKey({ name: "return", ctrl: false, meta: false, shift: false, sequence: "\r", raw: "\r", code: "Enter" }))
-    host.emitKey(createSyntheticKey({ name: "c", ctrl: true, meta: false, shift: true, sequence: "C", raw: "C", code: "KeyC" }))
+    host.emitKey(
+      createSyntheticKey({
+        name: "backspace",
+        ctrl: false,
+        meta: false,
+        shift: false,
+        sequence: "\x7f",
+        raw: "\x7f",
+        code: "Backspace",
+      }),
+    )
+    host.emitKey(
+      createSyntheticKey({
+        name: "return",
+        ctrl: false,
+        meta: false,
+        shift: false,
+        sequence: "\r",
+        raw: "\r",
+        code: "Enter",
+      }),
+    )
+    host.emitKey(
+      createSyntheticKey({ name: "c", ctrl: true, meta: false, shift: true, sequence: "C", raw: "C", code: "KeyC" }),
+    )
 
     expect(keys).toEqual([
       { name: "backspace", ctrl: false, meta: false, shift: false },

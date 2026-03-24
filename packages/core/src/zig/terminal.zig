@@ -507,6 +507,7 @@ fn writeMouseDisableSequences(tty: anytype) !void {
     try tty.writeAll(ansi.ANSI.disableButtonEventTracking);
     try tty.writeAll(ansi.ANSI.disableMouseTracking);
     try tty.writeAll(ansi.ANSI.disableSGRMouseMode);
+    try tty.writeAll(ansi.ANSI.disableSGRPixelMouseMode);
 }
 
 pub fn seedBrowserCapabilities(self: *Terminal) void {
@@ -518,7 +519,7 @@ pub fn seedBrowserCapabilities(self: *Terminal) void {
     self.caps.hyperlinks = true;
     self.caps.explicit_cursor_positioning = true;
 
-    const name = "xterm.js";
+    const name = "ghostty-web";
     @memcpy(self.term_info.name[0..name.len], name);
     self.term_info.name_len = name.len;
 }
@@ -544,12 +545,14 @@ pub fn setMouseMode(self: *Terminal, tty: anytype, enable: bool, enable_movement
             // click/drag modes so they remain active.
             try tty.writeAll(ansi.ANSI.disableAnyEventTracking);
         }
+        try tty.writeAll(ansi.ANSI.disableSGRPixelMouseMode);
         try tty.writeAll(ansi.ANSI.enableMouseTracking);
         try tty.writeAll(ansi.ANSI.enableButtonEventTracking);
         if (enable_movement) {
             try tty.writeAll(ansi.ANSI.enableAnyEventTracking);
         }
         try tty.writeAll(ansi.ANSI.enableSGRMouseMode);
+        self.state.pixel_mouse = false;
     } else {
         self.state.mouse = false;
         self.state.pixel_mouse = false;
@@ -634,12 +637,14 @@ pub fn restoreTerminalModes(self: *Terminal, tty: anytype) !void {
         if (!self.state.mouse_movement) {
             try tty.writeAll(ansi.ANSI.disableAnyEventTracking);
         }
+        try tty.writeAll(ansi.ANSI.disableSGRPixelMouseMode);
         try tty.writeAll(ansi.ANSI.enableMouseTracking);
         try tty.writeAll(ansi.ANSI.enableButtonEventTracking);
         if (self.state.mouse_movement) {
             try tty.writeAll(ansi.ANSI.enableAnyEventTracking);
         }
         try tty.writeAll(ansi.ANSI.enableSGRMouseMode);
+        self.state.pixel_mouse = false;
     }
 
     // Re-enable focus tracking if active
@@ -675,7 +680,11 @@ pub fn restoreTerminalModes(self: *Terminal, tty: anytype) !void {
 /// Parsing these is not complete yet
 pub fn processCapabilityResponse(self: *Terminal, response: []const u8) void {
     // DECRPM responses
-    if (std.mem.indexOf(u8, response, "1016;2$y")) |_| {
+    if (std.mem.indexOf(u8, response, "1016;1$y") != null or
+        std.mem.indexOf(u8, response, "1016;2$y") != null or
+        std.mem.indexOf(u8, response, "1016;3$y") != null or
+        std.mem.indexOf(u8, response, "1016;4$y") != null)
+    {
         self.caps.sgr_pixels = true;
     }
     if (std.mem.indexOf(u8, response, "2027;2$y")) |_| {

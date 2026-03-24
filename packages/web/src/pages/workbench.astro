@@ -4,7 +4,7 @@ import Base from "../layouts/Base.astro"
 
 <Base
   title="OpenTUI Browser Workbench"
-  description="Experimental OpenTUI browser runtime powered by Zig WebAssembly and xterm.js."
+  description="Experimental OpenTUI browser runtime powered by Zig WebAssembly and Ghostty Web."
 >
   <main class="browser-workbench">
     <section class="browser-workbench__intro">
@@ -12,7 +12,7 @@ import Base from "../layouts/Base.astro"
       <div class="browser-workbench__copy">
         <h1>OpenTUI in the browser</h1>
         <p>
-          This workbench runs the Zig renderer as WebAssembly, pushes VT output into xterm.js, and keeps the
+          This workbench runs the Zig renderer as WebAssembly, pushes VT output into Ghostty Web, and keeps the
           OpenTUI app itself in core primitives. It is intended as the workspace-first browser proving ground for
           keyboard, mouse, resize, cursor, alt-screen, color, Unicode, clipboard, and theme hooks.
         </p>
@@ -40,7 +40,7 @@ import Base from "../layouts/Base.astro"
         </div>
         <div class="browser-workbench__meta">
           <span>zig wasm</span>
-          <span>xterm.js</span>
+          <span>ghostty-web</span>
           <span>@opentui/core/browser</span>
         </div>
       </div>
@@ -243,20 +243,21 @@ import Base from "../layouts/Base.astro"
     z-index: 1;
     width: 100%;
     height: min(78vh, 820px);
+    box-sizing: border-box;
+    padding: 12px;
     border-radius: 18px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: rgba(6, 10, 13, 0.92);
     overflow: hidden;
   }
 
-  .browser-workbench__terminal :global(.xterm) {
-    height: 100%;
-    padding: 12px;
+  .browser-workbench__terminal :global(canvas) {
+    display: block;
+    border-radius: 12px;
   }
 
-  .browser-workbench__terminal :global(.xterm-viewport),
-  .browser-workbench__terminal :global(.xterm-screen) {
-    border-radius: 12px;
+  .browser-workbench__terminal:focus-visible {
+    outline: none;
   }
 
   @media (max-width: 900px) {

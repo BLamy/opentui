@@ -2,7 +2,7 @@ import { expect, test } from "bun:test"
 
 import {
   createDocsExampleMonacoTheme,
-  createDocsExampleXtermTheme,
+  createDocsExampleTerminalTheme,
   getDocsExampleRendererBackground,
   resolveThemeMode,
   type CssVarReader,
@@ -34,7 +34,7 @@ test("builds a light Monaco theme from docs example CSS vars", () => {
 })
 
 test("uses dark terminal fallbacks when CSS vars are not provided", () => {
-  const theme = createDocsExampleXtermTheme("dark", createReader())
+  const theme = createDocsExampleTerminalTheme("dark", createReader())
 
   expect(theme.background).toBe("#0d1417")
   expect(theme.foreground).toBe("#edf7fa")

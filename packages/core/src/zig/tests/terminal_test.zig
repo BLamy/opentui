@@ -69,6 +69,7 @@ test "parseXtversion - full ghostty response" {
     try testing.expectEqualStrings("ghostty", term.getTerminalName());
     try testing.expectEqualStrings("1.1.3", term.getTerminalVersion());
     try testing.expect(term.term_info.from_xtversion);
+    try testing.expect(term.caps.sgr_pixels);
 }
 
 test "environment variables - should be overridden by xtversion" {
@@ -703,11 +704,14 @@ test "setMouseMode - enable without movement keeps click/drag only" {
 
     const output = writer.getWritten();
     const idx_disable_any = std.mem.indexOf(u8, output, ansi.ANSI.disableAnyEventTracking).?;
+    const idx_disable_pixel = std.mem.indexOf(u8, output, "\x1b[?1016l").?;
     const idx_enable_mouse = std.mem.indexOf(u8, output, ansi.ANSI.enableMouseTracking).?;
     const idx_enable_button = std.mem.indexOf(u8, output, ansi.ANSI.enableButtonEventTracking).?;
     const idx_enable_sgr = std.mem.indexOf(u8, output, ansi.ANSI.enableSGRMouseMode).?;
     try testing.expect(std.mem.indexOf(u8, output, ansi.ANSI.enableAnyEventTracking) == null);
     try testing.expect(idx_disable_any < idx_enable_mouse);
+    try testing.expect(idx_disable_any < idx_disable_pixel);
+    try testing.expect(idx_disable_pixel < idx_enable_mouse);
     try testing.expect(idx_enable_mouse < idx_enable_button);
     try testing.expect(idx_enable_button < idx_enable_sgr);
 
@@ -723,10 +727,12 @@ test "setMouseMode - enable with movement enables any-event tracking" {
     try term.setMouseMode(&writer, true, true);
 
     const output = writer.getWritten();
+    const idx_disable_pixel = std.mem.indexOf(u8, output, "\x1b[?1016l").?;
     const idx_enable_mouse = std.mem.indexOf(u8, output, ansi.ANSI.enableMouseTracking).?;
     const idx_enable_button = std.mem.indexOf(u8, output, ansi.ANSI.enableButtonEventTracking).?;
     const idx_enable_any = std.mem.indexOf(u8, output, ansi.ANSI.enableAnyEventTracking).?;
     const idx_enable_sgr = std.mem.indexOf(u8, output, ansi.ANSI.enableSGRMouseMode).?;
+    try testing.expect(idx_disable_pixel < idx_enable_mouse);
     try testing.expect(idx_enable_mouse < idx_enable_button);
     try testing.expect(idx_enable_button < idx_enable_any);
     try testing.expect(idx_enable_any < idx_enable_sgr);
@@ -748,10 +754,13 @@ test "restoreTerminalModes - respects mouse movement setting" {
 
     const output = writer.getWritten();
     const idx_disable_any = std.mem.indexOf(u8, output, ansi.ANSI.disableAnyEventTracking).?;
+    const idx_disable_pixel = std.mem.indexOf(u8, output, "\x1b[?1016l").?;
     const idx_enable_mouse = std.mem.indexOf(u8, output, ansi.ANSI.enableMouseTracking).?;
     const idx_enable_button = std.mem.indexOf(u8, output, ansi.ANSI.enableButtonEventTracking).?;
     const idx_enable_sgr = std.mem.indexOf(u8, output, ansi.ANSI.enableSGRMouseMode).?;
     try testing.expect(idx_disable_any < idx_enable_mouse);
+    try testing.expect(idx_disable_any < idx_disable_pixel);
+    try testing.expect(idx_disable_pixel < idx_enable_mouse);
     try testing.expect(idx_enable_mouse < idx_enable_button);
     try testing.expect(idx_enable_button < idx_enable_sgr);
     try testing.expect(std.mem.indexOf(u8, output, ansi.ANSI.enableAnyEventTracking) == null);
@@ -773,10 +782,31 @@ test "resetState - force-disables mouse when cleanup is pending and state drifte
     const idx_disable_button = std.mem.indexOf(u8, output, ansi.ANSI.disableButtonEventTracking).?;
     const idx_disable_mouse = std.mem.indexOf(u8, output, ansi.ANSI.disableMouseTracking).?;
     const idx_disable_sgr = std.mem.indexOf(u8, output, ansi.ANSI.disableSGRMouseMode).?;
+    const idx_disable_pixel = std.mem.indexOf(u8, output, ansi.ANSI.disableSGRPixelMouseMode).?;
     try testing.expect(idx_disable_any < idx_disable_button);
     try testing.expect(idx_disable_button < idx_disable_mouse);
     try testing.expect(idx_disable_mouse < idx_disable_sgr);
+    try testing.expect(idx_disable_sgr < idx_disable_pixel);
     try testing.expect(!term.state.mouse);
+}
+
+test "setMouseMode - disable resets pixel mouse mode" {
+    var term = Terminal.init(.{});
+    term.state.mouse = true;
+    term.state.mouse_movement = true;
+    term.state.pixel_mouse = true;
+
+    var writer = TestWriter.init(testing.allocator);
+    defer writer.deinit();
+
+    try term.setMouseMode(&writer, false, true);
+
+    const output = writer.getWritten();
+    const idx_disable_sgr = std.mem.indexOf(u8, output, ansi.ANSI.disableSGRMouseMode).?;
+    const idx_disable_pixel = std.mem.indexOf(u8, output, ansi.ANSI.disableSGRPixelMouseMode).?;
+
+    try testing.expect(idx_disable_sgr < idx_disable_pixel);
+    try testing.expect(!term.state.pixel_mouse);
 }
 
 test "resetState - skips mouse disable when mouse was never enabled" {
@@ -792,4 +822,5 @@ test "resetState - skips mouse disable when mouse was never enabled" {
     try testing.expect(std.mem.indexOf(u8, output, ansi.ANSI.disableButtonEventTracking) == null);
     try testing.expect(std.mem.indexOf(u8, output, ansi.ANSI.disableMouseTracking) == null);
     try testing.expect(std.mem.indexOf(u8, output, ansi.ANSI.disableSGRMouseMode) == null);
+    try testing.expect(std.mem.indexOf(u8, output, ansi.ANSI.disableSGRPixelMouseMode) == null);
 }
