@@ -59,7 +59,10 @@ const browserAliases = [
   { find: /^node:fs$/, replacement: fileURLToPath(new URL("./src/shims/fs.ts", import.meta.url)) },
   { find: /^node:os$/, replacement: fileURLToPath(new URL("./src/shims/os.ts", import.meta.url)) },
   { find: /^node:path$/, replacement: fileURLToPath(new URL("./src/shims/path.ts", import.meta.url)) },
-  { find: /^node:worker_threads$/, replacement: fileURLToPath(new URL("./src/shims/worker-threads.ts", import.meta.url)) },
+  {
+    find: /^node:worker_threads$/,
+    replacement: fileURLToPath(new URL("./src/shims/worker-threads.ts", import.meta.url)),
+  },
   { find: /^fs\/promises$/, replacement: fileURLToPath(new URL("./src/shims/fs-promises.ts", import.meta.url)) },
   { find: /^fs$/, replacement: fileURLToPath(new URL("./src/shims/fs.ts", import.meta.url)) },
   { find: /^os$/, replacement: fileURLToPath(new URL("./src/shims/os.ts", import.meta.url)) },
@@ -93,7 +96,7 @@ export default defineConfig({
       alias: browserAliases,
     },
     optimizeDeps: {
-      include: ["@xterm/addon-fit", "@xterm/xterm", "monaco-editor", "typescript"],
+      include: ["ghostty-web", "monaco-editor", "typescript"],
       esbuildOptions: {
         // yoga-layout ships a top-level-await ESM entry.
         target: "es2022",

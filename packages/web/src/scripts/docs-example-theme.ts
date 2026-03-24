@@ -1,6 +1,6 @@
 import type * as Monaco from "monaco-editor"
 
-import type { ITheme } from "@xterm/xterm"
+import type { ITheme } from "ghostty-web"
 
 export type ThemeMode = "dark" | "light"
 export type CssVarReader = (name: string, fallback: string) => string
@@ -231,7 +231,7 @@ export function createDocsExampleMonacoTheme(mode: ThemeMode, read: CssVarReader
   }
 }
 
-export function createDocsExampleXtermTheme(mode: ThemeMode, read: CssVarReader): ITheme {
+export function createDocsExampleTerminalTheme(mode: ThemeMode, read: CssVarReader): ITheme {
   const defaults = THEME_DEFAULTS[mode]
 
   return {

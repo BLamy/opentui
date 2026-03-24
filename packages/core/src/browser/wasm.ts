@@ -12,7 +12,13 @@ import {
   MeasureResultStruct,
   VisualCursorStruct,
 } from "../zig-structs.js"
-import { type CursorStyleOptions, type Highlight, type LineInfo, type TargetChannel, type WidthMethod } from "../types.js"
+import {
+  type CursorStyleOptions,
+  type Highlight,
+  type LineInfo,
+  type TargetChannel,
+  type WidthMethod,
+} from "../types.js"
 
 const CURSOR_STYLE_TO_ID = { block: 0, line: 1, underline: 2, default: 3 } as const
 const MOUSE_STYLE_TO_ID = { default: 0, pointer: 1, text: 2, crosshair: 3, move: 4, "not-allowed": 5 } as const
@@ -36,7 +42,7 @@ const DEFAULT_CAPABILITIES = {
   osc52: false,
   explicit_cursor_positioning: true,
   terminal: {
-    name: "xterm.js",
+    name: "ghostty-web",
     version: "browser",
     fromXtVersion: false,
   },
@@ -49,13 +55,7 @@ interface WasmExports {
   wasmFree: (ptr: number, len: number) => void
   createRenderer: (width: number, height: number, testing: boolean, remote: boolean) => number
   destroyRenderer: (renderer: number) => void
-  setTerminalEnvVar: (
-    renderer: number,
-    keyPtr: number,
-    keyLen: number,
-    valuePtr: number,
-    valueLen: number,
-  ) => number
+  setTerminalEnvVar: (renderer: number, keyPtr: number, keyLen: number, valuePtr: number, valueLen: number) => number
   setUseThread: (renderer: number, useThread: boolean) => void
   setBackgroundColor: (renderer: number, colorPtr: number) => void
   setRenderOffset: (renderer: number, offset: number) => void
@@ -212,7 +212,14 @@ interface WasmExports {
   hitGridPushScissorRect: (renderer: number, x: number, y: number, width: number, height: number) => void
   hitGridPopScissorRect: (renderer: number) => void
   hitGridClearScissorRects: (renderer: number) => void
-  addToCurrentHitGridClipped: (renderer: number, x: number, y: number, width: number, height: number, id: number) => void
+  addToCurrentHitGridClipped: (
+    renderer: number,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    id: number,
+  ) => void
   checkHit: (renderer: number, x: number, y: number) => number
   getHitGridDirty: (renderer: number) => boolean
   restoreTerminalModes: (renderer: number) => void
@@ -348,7 +355,10 @@ class BrowserRenderLib {
       return fn(0)
     }
 
-    return this.withOptionalBytes(new Uint8Array(color.buffer.buffer, color.buffer.byteOffset, color.buffer.byteLength), fn)
+    return this.withOptionalBytes(
+      new Uint8Array(color.buffer.buffer, color.buffer.byteOffset, color.buffer.byteLength),
+      fn,
+    )
   }
 
   private withRequiredColor<T>(color: RGBA, fn: (ptr: Pointer) => T): T {
@@ -490,7 +500,11 @@ class BrowserRenderLib {
     }
   }
 
-  public createRenderer(width: number, height: number, options: { testing?: boolean; remote?: boolean } = {}): Pointer | null {
+  public createRenderer(
+    width: number,
+    height: number,
+    options: { testing?: boolean; remote?: boolean } = {},
+  ): Pointer | null {
     const renderer = this.exports.createRenderer(width, height, options.testing ?? false, options.remote ?? false)
     if (!renderer) {
       return null
@@ -564,18 +578,30 @@ class BrowserRenderLib {
 
   public getNextBuffer(renderer: Pointer): OptimizedBuffer {
     const bufferPtr = this.exports.getNextBuffer(renderer)
-    return new OptimizedBuffer(this as unknown as RenderLib, bufferPtr, this.getBufferWidth(bufferPtr), this.getBufferHeight(bufferPtr), {
-      id: "next buffer",
-      widthMethod: "unicode",
-    })
+    return new OptimizedBuffer(
+      this as unknown as RenderLib,
+      bufferPtr,
+      this.getBufferWidth(bufferPtr),
+      this.getBufferHeight(bufferPtr),
+      {
+        id: "next buffer",
+        widthMethod: "unicode",
+      },
+    )
   }
 
   public getCurrentBuffer(renderer: Pointer): OptimizedBuffer {
     const bufferPtr = this.exports.getCurrentBuffer(renderer)
-    return new OptimizedBuffer(this as unknown as RenderLib, bufferPtr, this.getBufferWidth(bufferPtr), this.getBufferHeight(bufferPtr), {
-      id: "current buffer",
-      widthMethod: "unicode",
-    })
+    return new OptimizedBuffer(
+      this as unknown as RenderLib,
+      bufferPtr,
+      this.getBufferWidth(bufferPtr),
+      this.getBufferHeight(bufferPtr),
+      {
+        id: "current buffer",
+        widthMethod: "unicode",
+      },
+    )
   }
 
   public createOptimizedBuffer(
@@ -586,7 +612,14 @@ class BrowserRenderLib {
     id?: string,
   ): OptimizedBuffer {
     return this.withString(id ?? "unnamed buffer", (idPtr, idLen) => {
-      const ptr = this.exports.createOptimizedBuffer(width, height, respectAlpha, widthMethod === "wcwidth" ? 0 : 1, idPtr, idLen)
+      const ptr = this.exports.createOptimizedBuffer(
+        width,
+        height,
+        respectAlpha,
+        widthMethod === "wcwidth" ? 0 : 1,
+        idPtr,
+        idLen,
+      )
       if (!ptr) {
         throw new Error(`Failed to create browser optimized buffer: ${width}x${height}`)
       }
@@ -701,7 +734,9 @@ class BrowserRenderLib {
   ): void {
     this.withString(text, (textPtr, textLen) =>
       this.withRequiredColor(color, (fgPtr) =>
-        this.withOptionalColor(bgColor, (bgPtr) => this.exports.bufferDrawText(buffer, textPtr, textLen, x, y, fgPtr, bgPtr, attributes)),
+        this.withOptionalColor(bgColor, (bgPtr) =>
+          this.exports.bufferDrawText(buffer, textPtr, textLen, x, y, fgPtr, bgPtr, attributes),
+        ),
       ),
     )
   }
@@ -734,7 +769,9 @@ class BrowserRenderLib {
   ): void {
     const codePoint = char.codePointAt(0) ?? 32
     this.withRequiredColor(color, (fgPtr) =>
-      this.withRequiredColor(bgColor, (bgPtr) => this.exports.bufferSetCell(buffer, x, y, codePoint, fgPtr, bgPtr, attributes)),
+      this.withRequiredColor(bgColor, (bgPtr) =>
+        this.exports.bufferSetCell(buffer, x, y, codePoint, fgPtr, bgPtr, attributes),
+      ),
     )
   }
 
@@ -1094,7 +1131,9 @@ class BrowserRenderLib {
     }
 
     const packed = new Uint32Array([attributes])
-    this.withArray(new Uint8Array(packed.buffer), (attrPtr) => this.exports.textBufferSetDefaultAttributes(buffer, attrPtr))
+    this.withArray(new Uint8Array(packed.buffer), (attrPtr) =>
+      this.exports.textBufferSetDefaultAttributes(buffer, attrPtr),
+    )
   }
 
   public textBufferResetDefaults(buffer: Pointer): void {
@@ -1124,7 +1163,12 @@ class BrowserRenderLib {
     )
   }
 
-  public textBufferReplaceMemBuffer(buffer: Pointer, memId: number, bytes: Uint8Array, owned: boolean = false): boolean {
+  public textBufferReplaceMemBuffer(
+    buffer: Pointer,
+    memId: number,
+    bytes: Uint8Array,
+    owned: boolean = false,
+  ): boolean {
     if (owned) {
       return this.adoptBytes(bytes, (bytesPtr, bytesLen) =>
         this.exports.textBufferReplaceMemBuffer(buffer, memId, bytesPtr, bytesLen, true),
@@ -1156,16 +1200,15 @@ class BrowserRenderLib {
     return this.withString(path, (pathPtr, pathLen) => this.exports.textBufferLoadFile(buffer, pathPtr, pathLen))
   }
 
-  public textBufferSetStyledText(
-    buffer: Pointer,
-    chunks: StyledChunkInput[],
-  ): void {
+  public textBufferSetStyledText(buffer: Pointer, chunks: StyledChunkInput[]): void {
     if (chunks.length === 0) {
       this.textBufferClear(buffer)
       return
     }
 
-    this.withStyledChunks(chunks, (chunksPtr, chunkCount) => this.exports.textBufferSetStyledText(buffer, chunksPtr, chunkCount))
+    this.withStyledChunks(chunks, (chunksPtr, chunkCount) =>
+      this.exports.textBufferSetStyledText(buffer, chunksPtr, chunkCount),
+    )
   }
 
   public textBufferGetLineCount(buffer: Pointer): number {
@@ -1180,7 +1223,12 @@ class BrowserRenderLib {
     })
   }
 
-  public textBufferGetTextRange(buffer: Pointer, startOffset: number, endOffset: number, maxLength: number): Uint8Array | null {
+  public textBufferGetTextRange(
+    buffer: Pointer,
+    startOffset: number,
+    endOffset: number,
+    maxLength: number,
+  ): Uint8Array | null {
     return this.withOutputBuffer(maxLength, (outPtr) => {
       const actualLen = this.exports.textBufferGetTextRange(buffer, startOffset, endOffset, outPtr, maxLength)
       const len = typeof actualLen === "bigint" ? Number(actualLen) : actualLen
@@ -1245,9 +1293,17 @@ class BrowserRenderLib {
     this.exports.destroyTextBufferView(view)
   }
 
-  public textBufferViewSetSelection(view: Pointer, start: number, end: number, bgColor: RGBA | null, fgColor: RGBA | null): void {
+  public textBufferViewSetSelection(
+    view: Pointer,
+    start: number,
+    end: number,
+    bgColor: RGBA | null,
+    fgColor: RGBA | null,
+  ): void {
     this.withOptionalColor(bgColor, (bgPtr) =>
-      this.withOptionalColor(fgColor, (fgPtr) => this.exports.textBufferViewSetSelection(view, start, end, bgPtr, fgPtr)),
+      this.withOptionalColor(fgColor, (fgPtr) =>
+        this.exports.textBufferViewSetSelection(view, start, end, bgPtr, fgPtr),
+      ),
     )
   }
 
@@ -1371,7 +1427,11 @@ class BrowserRenderLib {
     this.exports.textBufferViewSetTruncate(view, truncate)
   }
 
-  public textBufferViewMeasureForDimensions(view: Pointer, width: number, height: number): { lineCount: number; widthColsMax: number } | null {
+  public textBufferViewMeasureForDimensions(
+    view: Pointer,
+    width: number,
+    height: number,
+  ): { lineCount: number; widthColsMax: number } | null {
     return this.withOutputBuffer(MeasureResultStruct.size, (outPtr) => {
       const success = this.exports.textBufferViewMeasureForDimensions(view, width, height, outPtr)
       if (!success) {
@@ -1405,7 +1465,13 @@ class BrowserRenderLib {
     this.emitEditBufferNativeEvent(buffer, "content-changed")
   }
 
-  public editBufferDeleteRange(buffer: Pointer, startRow: number, startCol: number, endRow: number, endCol: number): void {
+  public editBufferDeleteRange(
+    buffer: Pointer,
+    startRow: number,
+    startCol: number,
+    endRow: number,
+    endCol: number,
+  ): void {
     this.exports.editBufferDeleteRange(buffer, startRow, startCol, endRow, endCol)
     this.emitEditBufferNativeEvent(buffer, "cursor-changed")
     this.emitEditBufferNativeEvent(buffer, "content-changed")
@@ -1486,7 +1552,10 @@ class BrowserRenderLib {
     })
   }
 
-  public editBufferOffsetToPosition(buffer: Pointer, offset: number): { row: number; col: number; offset: number } | null {
+  public editBufferOffsetToPosition(
+    buffer: Pointer,
+    offset: number,
+  ): { row: number; col: number; offset: number } | null {
     return this.withOutputBuffer(LogicalCursorStruct.size, (outPtr) => {
       const success = this.exports.editBufferOffsetToPosition(buffer, offset, outPtr)
       return success ? LogicalCursorStruct.unpack(this.copyOutputBuffer(outPtr, LogicalCursorStruct.size)) : null
@@ -1501,7 +1570,12 @@ class BrowserRenderLib {
     return this.exports.editBufferGetLineStartOffset(buffer, row)
   }
 
-  public editBufferGetTextRange(buffer: Pointer, startOffset: number, endOffset: number, maxLength: number): Uint8Array | null {
+  public editBufferGetTextRange(
+    buffer: Pointer,
+    startOffset: number,
+    endOffset: number,
+    maxLength: number,
+  ): Uint8Array | null {
     return this.withOutputBuffer(maxLength, (outPtr) => {
       const actualLen = this.exports.editBufferGetTextRange(buffer, startOffset, endOffset, outPtr, maxLength)
       const len = typeof actualLen === "bigint" ? Number(actualLen) : actualLen
@@ -1659,7 +1733,14 @@ class BrowserRenderLib {
     this.exports.editorViewSetViewportSize(view, width, height)
   }
 
-  public editorViewSetViewport(view: Pointer, x: number, y: number, width: number, height: number, moveCursor: boolean): void {
+  public editorViewSetViewport(
+    view: Pointer,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    moveCursor: boolean,
+  ): void {
     this.exports.editorViewSetViewport(view, x, y, width, height, moveCursor)
   }
 
@@ -1710,7 +1791,13 @@ class BrowserRenderLib {
     })
   }
 
-  public editorViewSetSelection(view: Pointer, start: number, end: number, bgColor: RGBA | null, fgColor: RGBA | null): void {
+  public editorViewSetSelection(
+    view: Pointer,
+    start: number,
+    end: number,
+    bgColor: RGBA | null,
+    fgColor: RGBA | null,
+  ): void {
     this.withOptionalColor(bgColor, (bgPtr) =>
       this.withOptionalColor(fgColor, (fgPtr) => this.exports.editorViewSetSelection(view, start, end, bgPtr, fgPtr)),
     )
@@ -1842,14 +1929,26 @@ class BrowserRenderLib {
     this.exports.editorViewSetCursorByOffset(view, offset)
   }
 
-  public editorViewGetNextWordBoundary(view: Pointer): { row: number; col: number; x: number; y: number; line: number } {
+  public editorViewGetNextWordBoundary(view: Pointer): {
+    row: number
+    col: number
+    x: number
+    y: number
+    line: number
+  } {
     return this.withOutputBuffer(VisualCursorStruct.size, (outPtr) => {
       this.exports.editorViewGetNextWordBoundary(view, outPtr)
       return VisualCursorStruct.unpack(this.copyOutputBuffer(outPtr, VisualCursorStruct.size))
     })
   }
 
-  public editorViewGetPrevWordBoundary(view: Pointer): { row: number; col: number; x: number; y: number; line: number } {
+  public editorViewGetPrevWordBoundary(view: Pointer): {
+    row: number
+    col: number
+    x: number
+    y: number
+    line: number
+  } {
     return this.withOutputBuffer(VisualCursorStruct.size, (outPtr) => {
       this.exports.editorViewGetPrevWordBoundary(view, outPtr)
       return VisualCursorStruct.unpack(this.copyOutputBuffer(outPtr, VisualCursorStruct.size))
@@ -1877,10 +1976,7 @@ class BrowserRenderLib {
     })
   }
 
-  public editorViewSetPlaceholderStyledText(
-    view: Pointer,
-    chunks: StyledChunkInput[],
-  ): void {
+  public editorViewSetPlaceholderStyledText(view: Pointer, chunks: StyledChunkInput[]): void {
     if (chunks.length === 0) {
       this.exports.editorViewSetPlaceholderStyledText(view, 0, 0)
       return
@@ -1911,7 +2007,13 @@ class BrowserRenderLib {
     this.exports.destroySyntaxStyle(style)
   }
 
-  public syntaxStyleRegister(style: Pointer, name: string, fg: RGBA | null, bg: RGBA | null, attributes: number): number {
+  public syntaxStyleRegister(
+    style: Pointer,
+    name: string,
+    fg: RGBA | null,
+    bg: RGBA | null,
+    attributes: number,
+  ): number {
     return this.withString(name, (namePtr, nameLen) =>
       this.withOptionalColor(fg, (fgPtr) =>
         this.withOptionalColor(bg, (bgPtr) =>
@@ -1922,7 +2024,9 @@ class BrowserRenderLib {
   }
 
   public syntaxStyleResolveByName(style: Pointer, name: string): number | null {
-    const result = this.withString(name, (namePtr, nameLen) => this.exports.syntaxStyleResolveByName(style, namePtr, nameLen))
+    const result = this.withString(name, (namePtr, nameLen) =>
+      this.exports.syntaxStyleResolveByName(style, namePtr, nameLen),
+    )
     return result === 0 ? null : result
   }
 

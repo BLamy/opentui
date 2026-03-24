@@ -274,7 +274,7 @@ export class BrowserRenderer extends EventEmitter implements RenderContext {
   private seedEnvironment(): void {
     this.lib.setTerminalEnvVar(this.rendererPtr, "TERM", "xterm-256color")
     this.lib.setTerminalEnvVar(this.rendererPtr, "COLORTERM", "truecolor")
-    this.lib.setTerminalEnvVar(this.rendererPtr, "TERM_PROGRAM", "xterm.js")
+    this.lib.setTerminalEnvVar(this.rendererPtr, "TERM_PROGRAM", "ghostty-web")
     this.lib.setTerminalEnvVar(this.rendererPtr, "TERM_PROGRAM_VERSION", "browser")
   }
 
@@ -544,7 +544,9 @@ export class BrowserRenderer extends EventEmitter implements RenderContext {
       const maybeRenderableId = this.hitTest(mouseEvent.x, mouseEvent.y)
       const maybeRenderable = Renderable.renderablesByNumber.get(maybeRenderableId)
       const fallbackTarget =
-        this._currentFocusedRenderable && !this._currentFocusedRenderable.isDestroyed && this._currentFocusedRenderable.focused
+        this._currentFocusedRenderable &&
+        !this._currentFocusedRenderable.isDestroyed &&
+        this._currentFocusedRenderable.focused
           ? this._currentFocusedRenderable
           : null
       const scrollTarget = maybeRenderable ?? fallbackTarget
@@ -594,7 +596,11 @@ export class BrowserRenderer extends EventEmitter implements RenderContext {
     }
 
     if (!sameElement && (mouseEvent.type === "drag" || mouseEvent.type === "move")) {
-      if (this.lastOverRenderable && this.lastOverRenderable !== this.capturedRenderable && !this.lastOverRenderable.isDestroyed) {
+      if (
+        this.lastOverRenderable &&
+        this.lastOverRenderable !== this.capturedRenderable &&
+        !this.lastOverRenderable.isDestroyed
+      ) {
         const event = new MouseEvent(this.lastOverRenderable, { ...mouseEvent, type: "out" })
         this.lastOverRenderable.processMouseEvent(event as any)
       }
@@ -818,7 +824,12 @@ export class BrowserRenderer extends EventEmitter implements RenderContext {
       return
     }
 
-    this.walkSelectableRenderables(currentContainer, this.currentSelection.bounds, selectedRenderables, touchedRenderables)
+    this.walkSelectableRenderables(
+      currentContainer,
+      this.currentSelection.bounds,
+      selectedRenderables,
+      touchedRenderables,
+    )
 
     for (const renderable of this.currentSelection.touchedRenderables) {
       if (!touchedRenderables.includes(renderable) && !renderable.isDestroyed) {

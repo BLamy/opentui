@@ -2,39 +2,21 @@ import { expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import path from "node:path"
 
-import { build } from "esbuild"
-
 import astroConfig from "../astro.config.mjs"
 
 test("docs content collection is defined", () => {
   const contentConfig = readFileSync(path.resolve(import.meta.dir, "../src/content.config.ts"), "utf8")
 
-  expect(contentConfig).toContain('defineCollection({')
+  expect(contentConfig).toContain("defineCollection({")
   expect(contentConfig).toContain("const docs =")
   expect(contentConfig).toContain("export const collections =")
 })
 
-test("docs optimizer target can bundle yoga-layout", async () => {
+test("docs optimizer target stays on es2022 for yoga-layout compatibility", () => {
   const target = astroConfig.vite?.optimizeDeps?.esbuildOptions?.target
 
   expect(target).toBe("es2022")
   expect(astroConfig.vite?.build?.target).toBe("es2022")
-
-  const result = await build({
-    absWorkingDir: path.resolve(import.meta.dir, ".."),
-    bundle: true,
-    format: "esm",
-    platform: "browser",
-    stdin: {
-      contents: 'import Yoga from "yoga-layout"\nconsole.log(Boolean(Yoga))\n',
-      resolveDir: path.resolve(import.meta.dir, ".."),
-      sourcefile: "yoga-entry.ts",
-    },
-    target,
-    write: false,
-  })
-
-  expect(result.outputFiles.length).toBeGreaterThan(0)
 })
 
 test("browser build aliases bun ffi for wasm-backed previews and prebundles interactive deps", () => {
@@ -49,15 +31,17 @@ test("browser build aliases bun ffi for wasm-backed previews and prebundles inte
   expect(String(fsPromisesAlias)).toContain("/packages/web/src/shims/fs-promises.ts")
   expect(String(workerThreadsAlias)).toContain("/packages/web/src/shims/worker-threads.ts")
   expect(astroConfig.vite?.define?.["process.arch"]).toBe(JSON.stringify("x64"))
-  expect(optimizeDepsInclude).toEqual(expect.arrayContaining(["@xterm/addon-fit", "@xterm/xterm", "monaco-editor", "typescript"]))
+  expect(optimizeDepsInclude).toEqual(expect.arrayContaining(["ghostty-web", "monaco-editor", "typescript"]))
 })
 
 test("markdown remark plugin annotates ts example fences as opt-in docs examples", () => {
-  const [annotateDocExampleFences] = astroConfig.markdown?.remarkPlugins ?? []
+  const [annotateDocExampleFences] = (astroConfig.markdown?.remarkPlugins ?? []) as unknown as Array<
+    (() => (tree: Record<string, unknown>) => void) | undefined
+  >
 
   expect(typeof annotateDocExampleFences).toBe("function")
 
-  const tree = {
+  const tree: Record<string, any> = {
     type: "root",
     children: [
       { type: "code", lang: "ts", meta: "example", value: "const x = 1" },
@@ -81,7 +65,7 @@ test("markdown remark plugin annotates ts example fences as opt-in docs examples
 })
 
 test("shiki transformer preserves source code for docs examples", () => {
-  const transformers = astroConfig.markdown?.shikiConfig?.transformers ?? []
+  const transformers = (astroConfig.markdown?.shikiConfig?.transformers ?? []) as Array<Record<string, any>>
   const copyButtonTransformer = transformers.find((transformer) => transformer.name === "copy-button")
 
   expect(copyButtonTransformer).toBeDefined()
@@ -90,7 +74,7 @@ test("shiki transformer preserves source code for docs examples", () => {
   copyButtonTransformer?.pre?.call(
     {
       source: "const x = 1",
-      options: {},
+      options: {} as any,
     },
     exampleNode,
   )

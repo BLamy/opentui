@@ -25,7 +25,10 @@ const COPY_BUTTON_MARKUP = `
 const PREVIEW_ROUTE = "/workbench/example"
 const PREVIEW_UPDATE_DEBOUNCE_MS = 120
 const TAB_INSERT = "  "
-const DESKTOP_MQ = typeof window !== "undefined" ? window.matchMedia("(min-width: 1200px)") : null
+const DESKTOP_MQ =
+  typeof window !== "undefined" && typeof window.matchMedia === "function"
+    ? window.matchMedia("(min-width: 1200px)")
+    : null
 export const DOC_EXAMPLE_BLOCK_SELECTOR = '.content [data-doc-example="true"] pre[data-code]'
 
 function createTabButton(label: string, pane: "code" | "preview", active: boolean): HTMLButtonElement {
@@ -72,10 +75,7 @@ function suppressPreviewStatus(iframe: HTMLIFrameElement): void {
   document.querySelector<HTMLElement>("[data-preview-status]")?.remove()
 }
 
-function mountPreview(
-  iframe: HTMLIFrameElement,
-  getPayload: () => { code: string; language: string },
-): void {
+function mountPreview(iframe: HTMLIFrameElement, getPayload: () => { code: string; language: string }): void {
   if (iframe.dataset.loaded === "true") {
     return
   }
@@ -159,7 +159,12 @@ async function mountCodeEditor(codePane: HTMLDivElement, code: string, language:
   }
 }
 
-function mountPaneResizer(wrapper: HTMLElement, body: HTMLDivElement, codePane: HTMLDivElement, resizer: HTMLDivElement): void {
+function mountPaneResizer(
+  wrapper: HTMLElement,
+  body: HTMLDivElement,
+  codePane: HTMLDivElement,
+  resizer: HTMLDivElement,
+): void {
   let activePointerId: number | null = null
   let currentWidth: number | null = null
   let dragStartWidth = 0

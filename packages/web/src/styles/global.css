@@ -1,23 +1,24 @@
-/* OpenTUI Documentation - Light theme matching opencode.ai */
+/* OpenTUI Documentation */
 
 :root {
-  /* Colors - matching opencode.ai exactly */
-  --color-bg: hsl(0, 20%, 99%);
-  --color-bg-weak: hsl(0, 8%, 97%);
-  --color-bg-weak-hover: hsl(0, 8%, 94%);
-  --color-bg-strong: hsl(0, 5%, 12%);
-  --color-bg-strong-hover: hsl(0, 5%, 18%);
+  color-scheme: light dark;
 
-  --color-text: hsl(0, 1%, 39%);
-  --color-text-weak: hsl(0, 1%, 60%);
-  --color-text-strong: hsl(0, 5%, 12%);
-  --color-text-inverted: hsl(0, 20%, 99%);
+  /* Colors */
+  --color-bg: #fcfcfc;
+  --color-bg-weak: #f7f7f7;
+  --color-bg-weak-hover: #f0f0f0;
+  --color-bg-strong: #1f1f1f;
+  --color-bg-strong-hover: #2e2e2e;
 
-  /* Border color matching opencode.ai: rgba(15, 0, 0, 0.12) */
-  --color-border: rgba(15, 0, 0, 0.12);
-  --color-border-weak: rgba(15, 0, 0, 0.12);
+  --color-text: #636363;
+  --color-text-weak: #999999;
+  --color-text-strong: #1f1f1f;
+  --color-text-inverted: #fcfcfc;
 
-  --color-icon: hsl(0, 1%, 55%);
+  --color-border: rgba(0, 0, 0, 0.12);
+  --color-border-weak: rgba(0, 0, 0, 0.08);
+
+  --color-icon: #8c8c8c;
   --color-success: #03b000;
 
   /* Typography - Inter variable + IBM Plex Mono */
@@ -1680,24 +1681,21 @@ textarea.doc-example__editor::selection {
 ============================================ */
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Backgrounds - warm-tinted dark, not pure black */
-    --color-bg: hsl(0, 5%, 9%);
-    --color-bg-weak: hsl(0, 4%, 12%);
-    --color-bg-weak-hover: hsl(0, 4%, 16%);
-    --color-bg-strong: hsl(0, 10%, 92%);
-    --color-bg-strong-hover: hsl(0, 10%, 98%);
+    --color-bg: #171717;
+    --color-bg-weak: #1f1f1f;
+    --color-bg-weak-hover: #292929;
+    --color-bg-strong: #ebebeb;
+    --color-bg-strong-hover: #fafafa;
 
-    /* Text - proper contrast hierarchy */
-    --color-text: hsl(0, 5%, 68%);
-    --color-text-weak: hsl(0, 3%, 50%);
-    --color-text-strong: hsl(0, 10%, 92%);
-    --color-text-inverted: hsl(0, 5%, 9%);
+    --color-text: #adadad;
+    --color-text-weak: #808080;
+    --color-text-strong: #ebebeb;
+    --color-text-inverted: #171717;
 
-    /* Borders - subtle, works on dark backgrounds */
     --color-border: rgba(255, 255, 255, 0.12);
     --color-border-weak: rgba(255, 255, 255, 0.08);
 
-    --color-icon: hsl(0, 3%, 55%);
+    --color-icon: #8c8c8c;
     --color-success: #22c55e;
 
     --doc-example-shell: #141414;
@@ -1774,18 +1772,18 @@ textarea.doc-example__editor::selection {
 
   /* Dark mode code editor theme */
   .code-section {
-    --editor-bg: hsl(0, 5%, 9%);
-    --editor-bg-header: hsl(0, 4%, 11%);
-    --editor-bg-tab: hsl(0, 5%, 9%);
-    --editor-bg-tab-active: hsl(0, 5%, 9%);
-    --editor-bg-tab-hover: hsl(0, 4%, 14%);
+    --editor-bg: #171717;
+    --editor-bg-header: #1c1c1c;
+    --editor-bg-tab: #171717;
+    --editor-bg-tab-active: #171717;
+    --editor-bg-tab-hover: #242424;
     --editor-border: rgba(255, 255, 255, 0.1);
-    --editor-gutter: hsl(0, 3%, 45%);
-    --editor-text: hsl(0, 5%, 85%);
-    --editor-text-muted: hsl(0, 3%, 55%);
+    --editor-gutter: #737373;
+    --editor-text: #d9d9d9;
+    --editor-text-muted: #8c8c8c;
   }
 
-  /* Dark mode syntax highlighting - designed for dark backgrounds */
+  /* Dark mode syntax highlighting */
   .code-editor-body .keyword {
     color: #c9a0dc;
   }
@@ -1803,7 +1801,7 @@ textarea.doc-example__editor::selection {
   }
 
   .code-editor-body .comment {
-    color: hsl(0, 3%, 45%);
+    color: #737373;
     font-style: italic;
   }
 
@@ -1820,7 +1818,7 @@ textarea.doc-example__editor::selection {
   }
 
   .code-editor-body .punctuation {
-    color: hsl(0, 3%, 55%);
+    color: #8c8c8c;
   }
 
   /* Dark mode Shiki/Astro code blocks */
@@ -1839,6 +1837,6 @@ textarea.doc-example__editor::selection {
   /* Dark mode logo adjustment inner rect */
   .logo-icon rect:last-child,
   .landing-logo svg rect:last-child {
-    fill: hsl(0, 5%, 9%);
+    fill: #171717;
   }
 }

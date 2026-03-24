@@ -42,20 +42,22 @@ import Base from "../../layouts/Base.astro"
   }
 
   .doc-preview-page__terminal {
+    position: relative;
     flex: 1;
     width: 100%;
     min-height: 0;
+    box-sizing: border-box;
+    padding: 10px;
     background: var(--doc-example-code-bg);
     overflow: hidden;
   }
 
-  .doc-preview-page__terminal :global(.xterm) {
-    height: 100%;
+  .doc-preview-page__terminal :global(canvas) {
+    display: block;
+    border-radius: 0px;
   }
 
-  .doc-preview-page__terminal :global(.xterm-viewport) {
-    overflow-y: auto !important;
-    scrollbar-width: thin;
-    scrollbar-color: var(--doc-example-terminal-scrollbar) transparent;
+  .doc-preview-page__terminal:focus-visible {
+    outline: none;
   }
 </style>
