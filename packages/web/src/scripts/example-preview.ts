@@ -15,7 +15,11 @@ import {
   type ThemeMode,
 } from "./docs-example-theme"
 import { compileExample } from "./example-preview-compiler"
-import { shouldAutoFocusPreview } from "./example-preview-focus"
+import {
+  isPreviewFrameActiveInParentDocument,
+  shouldAutoFocusPreview,
+  type PreviewFocusState,
+} from "./example-preview-focus"
 import { withBase } from "../utils/base-path"
 
 interface PreviewMessage {
@@ -28,11 +32,6 @@ interface PreviewMessage {
 interface PreviewRuntime {
   modules: Record<string, Record<string, unknown>>
   scope: Record<string, unknown>
-}
-
-interface PreviewFocusSnapshot {
-  activeWithinPreview: boolean
-  documentHasFocus: boolean
 }
 
 type PreviewSession = BrowserTerminalSession & {
@@ -95,10 +94,11 @@ function removeStatusElement(): void {
   statusElement?.remove()
 }
 
-function capturePreviewFocusSnapshot(surface: HTMLElement | null): PreviewFocusSnapshot {
+function capturePreviewFocusSnapshot(surface: HTMLElement | null): PreviewFocusState {
   return {
     documentHasFocus: document.hasFocus(),
     activeWithinPreview: surface?.contains(document.activeElement) ?? false,
+    frameElementHasFocus: isPreviewFrameActiveInParentDocument(window),
   }
 }
 
