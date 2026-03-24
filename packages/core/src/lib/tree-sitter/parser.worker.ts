@@ -85,7 +85,7 @@ class ParserWorker {
     if (this.initializePromise) {
       return this.initializePromise
     }
-    this.initializePromise = new Promise(async (resolve, reject) => {
+    this.initializePromise = (async () => {
       this.dataPath = dataPath
       this.tsDataPath = path.join(dataPath, "tree-sitter")
 
@@ -111,18 +111,14 @@ class ParserWorker {
           }
         }
 
-        await Parser.init({
-          locateFile() {
-            return treeWasm
-          },
-        })
+      await Parser.init({
+        locateFile() {
+          return treeWasm
+        },
+      })
 
-        this.initialized = true
-        resolve()
-      } catch (error) {
-        reject(error)
-      }
-    })
+      this.initialized = true
+    })()
     return this.initializePromise
   }
 

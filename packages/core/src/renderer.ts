@@ -588,6 +588,7 @@ export class CliRenderer extends EventEmitter implements RenderContext {
     this.maxFps = config.maxFps || 60
     this.targetFrameTime = 1000 / this.targetFps
     this.minTargetFrameTime = 1000 / this.maxFps
+    this.clock = config.clock ?? new SystemClock()
     this.memorySnapshotInterval = config.memorySnapshotInterval ?? 0
     this.gatherStats = config.gatherStats || false
     this.maxStatSamples = config.maxStatSamples || 300
@@ -632,8 +633,6 @@ export class CliRenderer extends EventEmitter implements RenderContext {
     })
 
     this.addExitListeners()
-
-    this.clock = config.clock ?? new SystemClock()
 
     const stdinParserMaxBufferBytes = config.stdinParserMaxBufferBytes ?? DEFAULT_STDIN_PARSER_MAX_BUFFER_BYTES
     this.stdinParser = new StdinParser({
@@ -1311,8 +1310,8 @@ export class CliRenderer extends EventEmitter implements RenderContext {
       this.stdin.setRawMode(true)
     }
 
-    this.stdin.resume()
     this.stdin.on("data", this.stdinListener)
+    this.stdin.resume()
   }
 
   private dispatchMouseEvent(
@@ -1394,9 +1393,9 @@ export class CliRenderer extends EventEmitter implements RenderContext {
     ) {
       const canStartSelection = Boolean(
         maybeRenderable &&
-          maybeRenderable.selectable &&
-          !maybeRenderable.isDestroyed &&
-          maybeRenderable.shouldStartSelection(mouseEvent.x, mouseEvent.y),
+        maybeRenderable.selectable &&
+        !maybeRenderable.isDestroyed &&
+        maybeRenderable.shouldStartSelection(mouseEvent.x, mouseEvent.y),
       )
 
       if (canStartSelection && maybeRenderable) {
@@ -1862,14 +1861,14 @@ export class CliRenderer extends EventEmitter implements RenderContext {
       this.stdin.setRawMode(true)
     }
 
+    // Drain any input buffered during suspension before registering the
+    // listener. Adding a "data" listener can auto-resume a Readable, so the
+    // drain must come first while the stream is still paused and read()
+    // pulls from the internal buffer rather than being a flowing-mode no-op.
+    while (this.stdin.read() !== null) {}
+    this.stdin.on("data", this.stdinListener)
     this.stdin.resume()
     this.addExitListeners()
-
-    setImmediate(() => {
-      // Consume any existing stdin data to avoid processing stale input
-      while (this.stdin.read() !== null) {}
-      this.stdin.on("data", this.stdinListener)
-    })
 
     this.lib.resumeRenderer(this.rendererPtr)
 
