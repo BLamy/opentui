@@ -200,8 +200,7 @@ export function resetSharedGhosttyCacheForTests(): void {
 export class GhosttyBrowserHost<
   TTerminal extends BrowserTerminalSurfaceLike = BrowserTerminalSurfaceLike,
   TFitAddon extends BrowserTerminalFitAddonLike = BrowserTerminalFitAddonLike,
-> implements BrowserTerminalHost
-{
+> implements BrowserTerminalHost {
   private readonly dataHandlers = new Set<(data: string) => void>()
   private readonly keyHandlers = new Set<(key: BrowserTerminalKey) => void>()
   private readonly resizeHandlers = new Set<(size: { cols: number; rows: number }) => void>()
@@ -372,14 +371,7 @@ export class GhosttyBrowserHost<
 
       const stepUnit = this.getWheelStepUnit(position.height)
       const repeat = clamp(Math.max(1, Math.round(Math.abs(rawDelta) / stepUnit)), 1, 5)
-      const baseButton =
-        axis === "x"
-          ? rawDelta < 0
-            ? 66
-            : 67
-          : rawDelta < 0
-            ? 64
-            : 65
+      const baseButton = axis === "x" ? (rawDelta < 0 ? 66 : 67) : rawDelta < 0 ? 64 : 65
       const buttonCode = baseButton | getMouseModifiers(event)
 
       for (let index = 0; index < repeat; index += 1) {

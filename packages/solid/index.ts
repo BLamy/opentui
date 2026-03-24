@@ -85,7 +85,9 @@ export const render = async (
   const renderer =
     rendererOrConfig instanceof BrowserRenderer || isMountedRenderer(rendererOrConfig)
       ? rendererOrConfig
-      : await (await import("@opentui/core")).createCliRenderer({
+      : await (
+          await import("@opentui/core")
+        ).createCliRenderer({
           ...rendererOrConfig,
           onDestroy: () => {
             rendererOrConfig.onDestroy?.()

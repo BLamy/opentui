@@ -18,7 +18,9 @@ const candidates = [
 const sourcePath = candidates.find((candidate) => existsSync(candidate))
 
 if (!sourcePath) {
-  console.warn("[sync-core-wasm] No browser wasm artifact found. Run `cd packages/core && bun run build:wasm` to enable /workbench.")
+  console.warn(
+    "[sync-core-wasm] No browser wasm artifact found. Run `cd packages/core && bun run build:wasm` to enable /workbench.",
+  )
   process.exit(0)
 }
 

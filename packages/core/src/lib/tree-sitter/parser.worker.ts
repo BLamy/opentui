@@ -89,27 +89,26 @@ class ParserWorker {
       this.dataPath = dataPath
       this.tsDataPath = path.join(dataPath, "tree-sitter")
 
-      try {
-        if (!isBrowserWorkerRuntime) {
-          await mkdir(path.join(this.tsDataPath, "languages"), { recursive: true })
-          await mkdir(path.join(this.tsDataPath, "queries"), { recursive: true })
+      if (!isBrowserWorkerRuntime) {
+        await mkdir(path.join(this.tsDataPath, "languages"), { recursive: true })
+        await mkdir(path.join(this.tsDataPath, "queries"), { recursive: true })
+      }
+
+      let treeWasm: string
+      if (isBrowserWorkerRuntime) {
+        const treeWasmModule = (await import("web-tree-sitter/tree-sitter.wasm?url")) as { default: string }
+        treeWasm = treeWasmModule.default
+      } else {
+        const treeWasmModule = (await import("web-tree-sitter/tree-sitter.wasm" as string, {
+          with: { type: "wasm" },
+        })) as { default: string }
+
+        treeWasm = treeWasmModule.default
+
+        if (isBunfsPath(treeWasm)) {
+          treeWasm = normalizeBunfsPath(path.parse(treeWasm).base)
         }
-
-        let treeWasm: string
-        if (isBrowserWorkerRuntime) {
-          const treeWasmModule = (await import("web-tree-sitter/tree-sitter.wasm?url")) as { default: string }
-          treeWasm = treeWasmModule.default
-        } else {
-          const treeWasmModule = (await import("web-tree-sitter/tree-sitter.wasm" as string, {
-            with: { type: "wasm" },
-          })) as { default: string }
-
-          treeWasm = treeWasmModule.default
-
-          if (isBunfsPath(treeWasm)) {
-            treeWasm = normalizeBunfsPath(path.parse(treeWasm).base)
-          }
-        }
+      }
 
       await Parser.init({
         locateFile() {
@@ -222,9 +221,8 @@ class ParserWorker {
       return undefined
     }
 
-    const languageInput = isBrowserWorkerRuntime && result.content
-      ? result.content
-      : result.filePath?.replaceAll("\\", "/")
+    const languageInput =
+      isBrowserWorkerRuntime && result.content ? result.content : result.filePath?.replaceAll("\\", "/")
 
     if (!languageInput) {
       return undefined
@@ -234,7 +232,10 @@ class ParserWorker {
       const language = await Language.load(languageInput)
       return language
     } catch (error) {
-      console.error(`Error loading language from ${typeof languageInput === "string" ? languageInput : languageSource}:`, error)
+      console.error(
+        `Error loading language from ${typeof languageInput === "string" ? languageInput : languageSource}:`,
+        error,
+      )
       return undefined
     }
   }

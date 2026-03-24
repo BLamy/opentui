@@ -125,7 +125,15 @@ class Renderer {
     this.ctx.fillText(char, px, py + 2)
   }
 
-  public drawBox(x: number, y: number, w: number, h: number, fg: string, style: BoxStyle = "single", label?: string): void {
+  public drawBox(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    fg: string,
+    style: BoxStyle = "single",
+    label?: string,
+  ): void {
     const chars =
       style === "double"
         ? { tl: "╔", tr: "╗", bl: "╚", br: "╝", h: "═", v: "║" }
@@ -217,7 +225,12 @@ function initSurface(root: HTMLElement): void {
           "Content",
         )
         renderer.drawText(`${wLeft}w`, Math.floor(startX), Math.floor(startY) - 1, renderer.colors.fgWeak)
-        renderer.drawText(`${wRight}w`, Math.floor(startX + wLeft + gap), Math.floor(startY) - 1, renderer.colors.fgWeak)
+        renderer.drawText(
+          `${wRight}w`,
+          Math.floor(startX + wLeft + gap),
+          Math.floor(startY) - 1,
+          renderer.colors.fgWeak,
+        )
         break
       }
 
@@ -293,7 +306,12 @@ function initSurface(root: HTMLElement): void {
           inputFocused ? renderer.colors.fgStrong : renderer.colors.border,
           inputFocused ? "double" : "single",
         )
-        renderer.drawText(inputFocused ? "Simon|" : "Simon", startX + 2, startY + 2, inputFocused ? renderer.colors.fgStrong : renderer.colors.fg)
+        renderer.drawText(
+          inputFocused ? "Simon|" : "Simon",
+          startX + 2,
+          startY + 2,
+          inputFocused ? renderer.colors.fgStrong : renderer.colors.fg,
+        )
 
         renderer.drawText("Role:", startX, startY + 5, renderer.colors.fg)
         renderer.drawBox(
@@ -319,7 +337,12 @@ function initSurface(root: HTMLElement): void {
           buttonFocused ? renderer.colors.fgStrong : renderer.colors.border,
           buttonFocused ? "bold" : "single",
         )
-        renderer.drawText("Save", startX + 17, startY + 11, buttonFocused ? renderer.colors.fgStrong : renderer.colors.fg)
+        renderer.drawText(
+          "Save",
+          startX + 17,
+          startY + 11,
+          buttonFocused ? renderer.colors.fgStrong : renderer.colors.fg,
+        )
         break
       }
 
@@ -332,7 +355,12 @@ function initSurface(root: HTMLElement): void {
         renderer.drawBox(startX, startY, 20, 8, renderer.colors.border, "single", "Menu")
         items.forEach((item, index) => {
           const active = index === idx
-          renderer.drawText((active ? ">" : " ") + item, startX + 2, startY + 2 + index, active ? renderer.colors.fgStrong : renderer.colors.fg)
+          renderer.drawText(
+            (active ? ">" : " ") + item,
+            startX + 2,
+            startY + 2 + index,
+            active ? renderer.colors.fgStrong : renderer.colors.fg,
+          )
         })
         break
       }
@@ -359,8 +387,24 @@ function initSurface(root: HTMLElement): void {
         renderer.drawChar("┐", startX + 6, startY + 4, renderer.colors.border)
         renderer.drawChar("│", startX - 6, startY + 5, renderer.colors.border)
         renderer.drawChar("│", startX + 6, startY + 5, renderer.colors.border)
-        renderer.drawBox(startX - 10, startY + 6, 8, 3, pulse ? renderer.colors.fgStrong : renderer.colors.fgWeak, "single", "List")
-        renderer.drawBox(startX + 2, startY + 6, 8, 3, !pulse ? renderer.colors.fgStrong : renderer.colors.fgWeak, "single", "Item")
+        renderer.drawBox(
+          startX - 10,
+          startY + 6,
+          8,
+          3,
+          pulse ? renderer.colors.fgStrong : renderer.colors.fgWeak,
+          "single",
+          "List",
+        )
+        renderer.drawBox(
+          startX + 2,
+          startY + 6,
+          8,
+          3,
+          !pulse ? renderer.colors.fgStrong : renderer.colors.fgWeak,
+          "single",
+          "Item",
+        )
         break
       }
 

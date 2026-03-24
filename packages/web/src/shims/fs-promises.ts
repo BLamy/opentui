@@ -35,7 +35,7 @@ function getEncoding(encoding?: string | { encoding?: string | null } | null): s
     return undefined
   }
 
-  return typeof encoding === "string" ? encoding : encoding.encoding ?? undefined
+  return typeof encoding === "string" ? encoding : (encoding.encoding ?? undefined)
 }
 
 export async function mkdir(): Promise<void> {}
