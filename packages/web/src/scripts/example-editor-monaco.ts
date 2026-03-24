@@ -28,6 +28,7 @@ interface MonacoHostElement extends HTMLElement {
 export interface DocExampleEditor {
   getValue(): string
   onDidChange(listener: (value: string) => void): () => void
+  captureFocus(): { restore(): void } | null
   dispose(): void
 }
 
@@ -195,6 +196,30 @@ export async function mountMonacoEditor(host: HTMLElement, options: EditorOption
       })
 
       return () => subscription.dispose()
+    },
+    captureFocus: () => {
+      if (!editor.hasTextFocus()) {
+        return null
+      }
+
+      const selection = editor.getSelection()
+      const position = editor.getPosition()
+      const scrollTop = editor.getScrollTop()
+      const scrollLeft = editor.getScrollLeft()
+
+      return {
+        restore: () => {
+          editor.focus()
+
+          if (selection) {
+            editor.setSelection(selection)
+          } else if (position) {
+            editor.setPosition(position)
+          }
+
+          editor.setScrollPosition({ scrollTop, scrollLeft })
+        },
+      }
     },
     dispose: () => {
       contentSizeListener.dispose()

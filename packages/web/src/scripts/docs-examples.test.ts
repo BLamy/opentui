@@ -1,6 +1,11 @@
 import { expect, test } from "bun:test"
 
-import { DOC_EXAMPLE_BLOCK_SELECTOR, enhanceDocExamples, getDocExampleBlocks } from "./docs-examples"
+import {
+  DOC_EXAMPLE_BLOCK_SELECTOR,
+  enhanceDocExamples,
+  getDocExampleBlocks,
+  shouldRestorePreviewEditorFocus,
+} from "./docs-examples"
 
 interface FakePreElement {
   dataset: Record<string, string | undefined>
@@ -35,4 +40,18 @@ test("enhanceDocExamples only wraps explicit example fences", async () => {
   })
 
   expect(enhanced).toEqual([exampleBlock])
+})
+
+test("restores editor focus when the iframe became the active element", () => {
+  const iframe = { tagName: "IFRAME" }
+
+  expect(shouldRestorePreviewEditorFocus(iframe, iframe)).toBe(true)
+})
+
+test("restores editor focus when focus fell back to the document body", () => {
+  expect(shouldRestorePreviewEditorFocus({ tagName: "BODY" }, { tagName: "IFRAME" })).toBe(true)
+})
+
+test("does not restore editor focus when the user moved to another control", () => {
+  expect(shouldRestorePreviewEditorFocus({ tagName: "BUTTON" }, { tagName: "IFRAME" })).toBe(false)
 })

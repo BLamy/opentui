@@ -25,12 +25,37 @@ const COPY_BUTTON_MARKUP = `
 
 const PREVIEW_ROUTE = withBase("/workbench/example")
 const PREVIEW_UPDATE_DEBOUNCE_MS = 120
+const PREVIEW_STATUS_MESSAGE = "opentui-doc-example-status"
 const TAB_INSERT = "  "
 const DESKTOP_MQ =
   typeof window !== "undefined" && typeof window.matchMedia === "function"
     ? window.matchMedia("(min-width: 1200px)")
     : null
 export const DOC_EXAMPLE_BLOCK_SELECTOR = '.content [data-doc-example="true"] pre[data-code]'
+
+interface PreviewUpdatePayload {
+  code: string
+  language: string
+  requestId?: string
+}
+
+interface PreviewStatusPayload {
+  type: typeof PREVIEW_STATUS_MESSAGE
+  requestId: string
+  status: "rendered" | "error"
+}
+
+interface PendingPreviewFocusRestore {
+  requestId: string
+  restore: (() => void) | null
+}
+
+interface FocusAwareElement {
+  tagName?: string | null
+}
+
+const pendingPreviewFocusRestores = new WeakMap<HTMLIFrameElement, PendingPreviewFocusRestore>()
+let previewRequestSequence = 0
 
 function createTabButton(label: string, pane: "code" | "preview", active: boolean): HTMLButtonElement {
   const button = document.createElement("button")
@@ -55,13 +80,31 @@ function createResizer(): HTMLDivElement {
   return resizer
 }
 
-function postExampleToFrame(iframe: HTMLIFrameElement, payload: { code: string; language: string }): void {
+function createPreviewRequestId(): string {
+  previewRequestSequence += 1
+  return `opentui-doc-example-${previewRequestSequence}`
+}
+
+export function shouldRestorePreviewEditorFocus(
+  activeElement: FocusAwareElement | null,
+  iframe: FocusAwareElement,
+): boolean {
+  return (
+    activeElement === null ||
+    activeElement === iframe ||
+    activeElement.tagName === "BODY" ||
+    activeElement.tagName === "HTML"
+  )
+}
+
+function postExampleToFrame(iframe: HTMLIFrameElement, payload: PreviewUpdatePayload): void {
   iframe.contentWindow?.postMessage(
     {
       type: "opentui-doc-example",
       code: payload.code,
       language: payload.language,
       path: window.location.pathname,
+      requestId: payload.requestId,
     },
     window.location.origin,
   )
@@ -92,6 +135,42 @@ function mountPreview(iframe: HTMLIFrameElement, getPayload: () => { code: strin
     },
     { once: true },
   )
+}
+
+function findPreviewIframeBySource(source: MessageEventSource | null): HTMLIFrameElement | null {
+  if (!source || typeof document === "undefined") {
+    return null
+  }
+
+  for (const iframe of document.querySelectorAll<HTMLIFrameElement>(".doc-example__frame")) {
+    if (iframe.contentWindow === source) {
+      return iframe
+    }
+  }
+
+  return null
+}
+
+function restorePendingPreviewEditorFocus(event: MessageEvent<PreviewStatusPayload>): void {
+  if (event.origin !== window.location.origin || event.data?.type !== PREVIEW_STATUS_MESSAGE) {
+    return
+  }
+
+  const iframe = findPreviewIframeBySource(event.source)
+  if (!iframe) {
+    return
+  }
+
+  const pending = pendingPreviewFocusRestores.get(iframe)
+  if (!pending || pending.requestId !== event.data.requestId) {
+    return
+  }
+
+  pendingPreviewFocusRestores.delete(iframe)
+
+  if (pending.restore && shouldRestorePreviewEditorFocus(document.activeElement, iframe)) {
+    pending.restore()
+  }
 }
 
 function resizeEditor(editor: HTMLTextAreaElement): void {
@@ -133,6 +212,22 @@ function createTextareaEditor(codePane: HTMLDivElement, code: string): DocExampl
       editor.addEventListener("input", handleInput)
 
       return () => editor.removeEventListener("input", handleInput)
+    },
+    captureFocus: () => {
+      if (document.activeElement !== editor) {
+        return null
+      }
+
+      const selectionStart = editor.selectionStart
+      const selectionEnd = editor.selectionEnd
+      const selectionDirection = editor.selectionDirection ?? "none"
+
+      return {
+        restore: () => {
+          editor.focus()
+          editor.setSelectionRange(selectionStart, selectionEnd, selectionDirection)
+        },
+      }
     },
     dispose: () => editor.remove(),
   }
@@ -424,7 +519,14 @@ async function enhanceCodeBlock(pre: HTMLPreElement): Promise<void> {
           return
         }
 
-        postExampleToFrame(iframe, { code: current.code, language })
+        const requestId = createPreviewRequestId()
+        const focusSnapshot = editor.captureFocus()
+        pendingPreviewFocusRestores.set(iframe, {
+          requestId,
+          restore: focusSnapshot ? () => focusSnapshot.restore() : null,
+        })
+
+        postExampleToFrame(iframe, { code: current.code, language, requestId })
       }, PREVIEW_UPDATE_DEBOUNCE_MS)
     })
 
@@ -466,5 +568,8 @@ export async function enhanceDocExamples(
 }
 
 if (typeof document !== "undefined") {
+  window.addEventListener("message", (event) => {
+    restorePendingPreviewEditorFocus(event as MessageEvent<PreviewStatusPayload>)
+  })
   void enhanceDocExamples()
 }
