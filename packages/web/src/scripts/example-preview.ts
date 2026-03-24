@@ -23,6 +23,7 @@ interface PreviewMessage {
   code: string
   language: string
   path?: string
+  requestId?: string
 }
 
 interface PreviewRuntime {
@@ -48,6 +49,7 @@ const STATUS_TEXT = {
   loading: "Loading browser preview…",
   error: "Preview failed.",
 } as const
+const PREVIEW_STATUS_MESSAGE = "opentui-doc-example-status"
 
 let currentSession: PreviewSession | null = null
 let latestPayload: PreviewMessage | null = null
@@ -301,6 +303,21 @@ function writeTerminalError(message: string): void {
   currentSession?.term.writeln?.(message)
 }
 
+function notifyParentPreviewStatus(requestId: string | undefined, status: "rendered" | "error"): void {
+  if (!requestId || window.parent === window) {
+    return
+  }
+
+  window.parent.postMessage(
+    {
+      type: PREVIEW_STATUS_MESSAGE,
+      requestId,
+      status,
+    },
+    window.location.origin,
+  )
+}
+
 async function handleExampleMessage(event: MessageEvent<PreviewMessage>): Promise<void> {
   if (event.origin !== window.location.origin) {
     return
@@ -312,10 +329,12 @@ async function handleExampleMessage(event: MessageEvent<PreviewMessage>): Promis
 
   try {
     await renderPreview(event.data)
+    notifyParentPreviewStatus(event.data.requestId, "rendered")
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown preview error."
     setStatus("error", message)
     writeTerminalError(message)
+    notifyParentPreviewStatus(event.data.requestId, "error")
   }
 }
 
