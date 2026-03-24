@@ -1,4 +1,8 @@
-import { ptr as runtimePtr, toArrayBuffer as runtimeToArrayBuffer, type Pointer } from "../../../core/src/lib/ffi-runtime.ts"
+import {
+  ptr as runtimePtr,
+  toArrayBuffer as runtimeToArrayBuffer,
+  type Pointer,
+} from "../../../core/src/lib/ffi-runtime.ts"
 
 type PointerInput = ArrayBuffer | ArrayBufferView | null | undefined
 

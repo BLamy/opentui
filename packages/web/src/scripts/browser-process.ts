@@ -16,7 +16,9 @@ export interface BrowserProcessLike extends Record<string, unknown> {
 
 const DEFAULT_EXIT_ERROR = "process.exit() is not available in the browser preview runtime."
 
-function createNoopEmitterMethod(processLike: BrowserProcessLike): (event: string, listener: BrowserProcessListener) => BrowserProcessLike {
+function createNoopEmitterMethod(
+  processLike: BrowserProcessLike,
+): (event: string, listener: BrowserProcessListener) => BrowserProcessLike {
   return (_event: string, _listener: BrowserProcessListener) => processLike
 }
 

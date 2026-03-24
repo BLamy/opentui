@@ -7,7 +7,12 @@ export {
   TargetChannel,
   getBaseAttributes,
 } from "../../../core/src/types.ts"
-export { createTextAttributes, attributesWithLink, getLinkId, visualizeRenderableTree } from "../../../core/src/utils.ts"
+export {
+  createTextAttributes,
+  attributesWithLink,
+  getLinkId,
+  visualizeRenderableTree,
+} from "../../../core/src/utils.ts"
 export { RGBA, hexToRgb, rgbToHex, hsvToRgb, parseColor } from "../../../core/src/lib/RGBA.ts"
 export { SyntaxStyle } from "../../../core/src/syntax-style.ts"
 export { KeyEvent, PasteEvent } from "../../../core/src/lib/KeyHandler.ts"

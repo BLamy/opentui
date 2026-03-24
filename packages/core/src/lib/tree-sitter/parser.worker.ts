@@ -221,9 +221,8 @@ class ParserWorker {
       return undefined
     }
 
-    const languageInput = isBrowserWorkerRuntime && result.content
-      ? result.content
-      : result.filePath?.replaceAll("\\", "/")
+    const languageInput =
+      isBrowserWorkerRuntime && result.content ? result.content : result.filePath?.replaceAll("\\", "/")
 
     if (!languageInput) {
       return undefined
@@ -233,7 +232,10 @@ class ParserWorker {
       const language = await Language.load(languageInput)
       return language
     } catch (error) {
-      console.error(`Error loading language from ${typeof languageInput === "string" ? languageInput : languageSource}:`, error)
+      console.error(
+        `Error loading language from ${typeof languageInput === "string" ? languageInput : languageSource}:`,
+        error,
+      )
       return undefined
     }
   }

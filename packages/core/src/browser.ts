@@ -3,6 +3,12 @@ export { BoxRenderable } from "./renderables/Box.js"
 export { RGBA, parseColor } from "./lib/RGBA.js"
 export { KeyEvent, PasteEvent } from "./lib/KeyHandler.js"
 export { TextAttributes } from "./types.js"
-export { MouseEvent, MouseButton, BrowserRenderEvents, BrowserRenderer, createBrowserRenderer } from "./browser/renderer.js"
+export {
+  MouseEvent,
+  MouseButton,
+  BrowserRenderEvents,
+  BrowserRenderer,
+  createBrowserRenderer,
+} from "./browser/renderer.js"
 export type { BrowserTerminalHost, BrowserTerminalKey, BrowserRendererConfig } from "./browser/renderer.js"
 export { loadBrowserRenderLib } from "./browser/wasm.js"

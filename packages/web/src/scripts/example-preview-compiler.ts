@@ -168,7 +168,11 @@ function findCorePreviewTarget(code: string, language: string): string | null {
       continue
     }
 
-    for (let declarationIndex = statement.declarationList.declarations.length - 1; declarationIndex >= 0; declarationIndex -= 1) {
+    for (
+      let declarationIndex = statement.declarationList.declarations.length - 1;
+      declarationIndex >= 0;
+      declarationIndex -= 1
+    ) {
       const declaration = statement.declarationList.declarations[declarationIndex]
       if (!ts.isIdentifier(declaration.name) || !declaration.initializer) {
         continue
@@ -198,11 +202,7 @@ function addCoreBootstrap(code: string, language: string): string {
     return [rendererBootstrap, code].filter(Boolean).join("\n\n")
   }
 
-  const sections = [
-    rendererBootstrap,
-    code,
-    `renderer.root.add(${previewTarget})`,
-  ].filter(Boolean)
+  const sections = [rendererBootstrap, code, `renderer.root.add(${previewTarget})`].filter(Boolean)
 
   return sections.join("\n\n")
 }

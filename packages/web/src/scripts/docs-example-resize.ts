@@ -59,7 +59,11 @@ export function getDefaultDocExampleCodePaneWidth(
   const normalizedContainerWidth = normalizeContainerWidth(containerWidth)
   const { defaultCodePaneRatio } = resolveOptions(options)
 
-  return clampDocExampleCodePaneWidth(normalizedContainerWidth * defaultCodePaneRatio, normalizedContainerWidth, options)
+  return clampDocExampleCodePaneWidth(
+    normalizedContainerWidth * defaultCodePaneRatio,
+    normalizedContainerWidth,
+    options,
+  )
 }
 
 export function getDocExampleResizeValueNow(
