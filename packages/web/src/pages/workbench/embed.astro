@@ -1,5 +1,8 @@
 ---
 import Base from "../../layouts/Base.astro"
+import { withBase } from "../../utils/base-path"
+
+const wasmUrl = withBase("/opentui/opentui.wasm")
 ---
 
 <Base title="OpenTUI Browser Demo" description="Embedded OpenTUI browser demo powered by the browser runtime.">
@@ -18,7 +21,7 @@ import Base from "../../layouts/Base.astro"
         </div>
       </div>
 
-      <div class="browser-demo-page__surface" data-workbench-root data-wasm-url="/opentui/opentui.wasm">
+      <div class="browser-demo-page__surface" data-workbench-root data-wasm-url={wasmUrl}>
         <div class="browser-demo-page__status" data-workbench-status data-state="loading">
           Loading browser runtime...
         </div>

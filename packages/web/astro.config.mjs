@@ -2,6 +2,24 @@ import { defineConfig } from "astro/config"
 import mdx from "@astrojs/mdx"
 import { fileURLToPath } from "node:url"
 
+function normalizeBasePath(basePath) {
+  if (typeof basePath !== "string" || basePath.trim().length === 0 || basePath === "/") {
+    return "/"
+  }
+
+  return `/${basePath.replace(/^\/+|\/+$/g, "")}`
+}
+
+function withBasePath(basePath, url) {
+  if (typeof url !== "string" || !url.startsWith("/") || url.startsWith("//")) {
+    return url
+  }
+
+  const prefix = basePath === "/" ? "" : basePath
+
+  return url === "/" ? `${prefix}/` || "/" : `${prefix}${url}`
+}
+
 function hasDocExampleFlag(meta) {
   if (typeof meta !== "string") {
     return false
@@ -46,6 +64,32 @@ function annotateDocExampleFences() {
   }
 }
 
+function rewriteRootRelativeMarkdownLinks(basePath) {
+  return () => {
+    return (tree) => {
+      const visit = (node) => {
+        if (!node || typeof node !== "object") {
+          return
+        }
+
+        if (typeof node.url === "string") {
+          node.url = withBasePath(basePath, node.url)
+        }
+
+        if (!Array.isArray(node.children)) {
+          return
+        }
+
+        for (const child of node.children) {
+          visit(child)
+        }
+      }
+
+      visit(tree)
+    }
+  }
+}
+
 const copyButtonTransformer = {
   name: "copy-button",
   pre(node) {
@@ -71,11 +115,15 @@ const browserAliases = [
   { find: /^worker_threads$/, replacement: fileURLToPath(new URL("./src/shims/worker-threads.ts", import.meta.url)) },
 ]
 
+const docsSiteUrl = process.env.DOCS_SITE_URL ?? "https://opentui.com"
+const docsBasePath = normalizeBasePath(process.env.DOCS_BASE_PATH)
+
 export default defineConfig({
   integrations: [mdx()],
-  site: "https://opentui.com",
+  site: docsSiteUrl,
+  base: docsBasePath,
   markdown: {
-    remarkPlugins: [annotateDocExampleFences],
+    remarkPlugins: [rewriteRootRelativeMarkdownLinks(docsBasePath), annotateDocExampleFences],
     shikiConfig: {
       themes: {
         light: "min-light",

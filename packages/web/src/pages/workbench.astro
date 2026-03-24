@@ -1,5 +1,10 @@
 ---
 import Base from "../layouts/Base.astro"
+import { withBase } from "../utils/base-path"
+
+const homeHref = withBase("/")
+const docsHref = withBase("/docs/getting-started")
+const wasmUrl = withBase("/opentui/opentui.wasm")
 ---
 
 <Base
@@ -18,8 +23,8 @@ import Base from "../layouts/Base.astro"
         </p>
       </div>
       <div class="browser-workbench__actions">
-        <a href="/" class="browser-workbench__link">Home</a>
-        <a href="/docs/getting-started" class="browser-workbench__link">Docs</a>
+        <a href={homeHref} class="browser-workbench__link">Home</a>
+        <a href={docsHref} class="browser-workbench__link">Docs</a>
         <a
           href="https://github.com/anomalyco/opentui"
           class="browser-workbench__link"
@@ -45,7 +50,7 @@ import Base from "../layouts/Base.astro"
         </div>
       </div>
 
-      <div class="browser-workbench__surface" data-workbench-root data-wasm-url="/opentui/opentui.wasm">
+      <div class="browser-workbench__surface" data-workbench-root data-wasm-url={wasmUrl}>
         <div class="browser-workbench__status" data-workbench-status data-state="loading">
           Loading browser runtime...
         </div>
