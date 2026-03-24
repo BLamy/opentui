@@ -1,4 +1,6 @@
 ---
+import { withBase } from "../utils/base-path"
+
 interface Props {
   title?: string
   description?: string
@@ -10,8 +12,8 @@ interface Props {
 const {
   title = "OpenTUI browser workbench",
   description = "Try the browser runtime directly in the docs. This demo runs the Zig renderer as WebAssembly through @opentui/core/browser and keeps keyboard, mouse, resize, selection, alt-screen, and clipboard behavior interactive.",
-  href = "/workbench",
-  embedSrc = "/workbench/embed",
+  href = withBase("/workbench"),
+  embedSrc = withBase("/workbench/embed"),
   height = 640,
 } = Astro.props
 ---

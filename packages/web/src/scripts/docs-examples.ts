@@ -11,6 +11,7 @@ import {
   getDocExampleResizeValueNow,
 } from "./docs-example-resize"
 import { getEditorLanguage, isPreviewLanguage, normalizePreviewLanguage } from "./example-preview-languages"
+import { withBase } from "../utils/base-path"
 
 const COPY_BUTTON_MARKUP = `
   <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -22,7 +23,7 @@ const COPY_BUTTON_MARKUP = `
   </svg>
 `
 
-const PREVIEW_ROUTE = "/workbench/example"
+const PREVIEW_ROUTE = withBase("/workbench/example")
 const PREVIEW_UPDATE_DEBOUNCE_MS = 120
 const TAB_INSERT = "  "
 const DESKTOP_MQ =

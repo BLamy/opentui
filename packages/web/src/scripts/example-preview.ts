@@ -16,6 +16,7 @@ import {
 } from "./docs-example-theme"
 import { compileExample } from "./example-preview-compiler"
 import { shouldAutoFocusPreview } from "./example-preview-focus"
+import { withBase } from "../utils/base-path"
 
 interface PreviewMessage {
   type: "opentui-doc-example"
@@ -208,7 +209,7 @@ async function createSession(themeMode: ThemeMode, autoFocus: boolean): Promise<
   })
 
   try {
-    const wasmUrl = root.dataset.wasmUrl ?? "/opentui/opentui.wasm"
+    const wasmUrl = root.dataset.wasmUrl ?? withBase("/opentui/opentui.wasm")
     await ensureRenderLib(wasmUrl)
 
     const renderer = await createBrowserRenderer(terminalSession.host, {

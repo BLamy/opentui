@@ -16,6 +16,7 @@ import {
   type BrowserTerminalTheme,
 } from "./browser-terminal-session"
 import { getWorkbenchEditorCursorPosition } from "./workbench-cursor"
+import { withBase } from "../utils/base-path"
 
 type ThemeMode = "dark" | "light"
 type LogTone = "info" | "accent" | "success" | "warn" | "error"
@@ -1370,7 +1371,7 @@ async function bootstrapWorkbench(): Promise<void> {
 
   const initialThemeMode: ThemeMode = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
   const model = new WorkbenchModel(initialThemeMode)
-  const wasmUrl = root.dataset.wasmUrl ?? "/opentui/opentui.wasm"
+  const wasmUrl = root.dataset.wasmUrl ?? withBase("/opentui/opentui.wasm")
   let currentSession: WorkbenchRuntimeSession | null = null
   let mountCounter = 0
 

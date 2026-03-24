@@ -17,6 +17,8 @@ test("docs optimizer target stays on es2022 for yoga-layout compatibility", () =
 
   expect(target).toBe("es2022")
   expect(astroConfig.vite?.build?.target).toBe("es2022")
+  expect(astroConfig.base).toBe("/")
+  expect(astroConfig.site).toBe("https://opentui.com")
 })
 
 test("browser build aliases bun ffi for wasm-backed previews and prebundles interactive deps", () => {
@@ -34,12 +36,25 @@ test("browser build aliases bun ffi for wasm-backed previews and prebundles inte
   expect(optimizeDepsInclude).toEqual(expect.arrayContaining(["ghostty-web", "monaco-editor", "typescript"]))
 })
 
-test("markdown remark plugin annotates ts example fences as opt-in docs examples", () => {
-  const [annotateDocExampleFences] = (astroConfig.markdown?.remarkPlugins ?? []) as unknown as Array<
-    (() => (tree: Record<string, unknown>) => void) | undefined
-  >
+test("markdown remark plugins rewrite root-relative links and annotate opt-in docs examples", () => {
+  const [rewriteRootRelativeMarkdownLinks, annotateDocExampleFences] = (astroConfig.markdown?.remarkPlugins ??
+    []) as unknown as Array<(() => (tree: Record<string, unknown>) => void) | undefined>
 
+  expect(typeof rewriteRootRelativeMarkdownLinks).toBe("function")
   expect(typeof annotateDocExampleFences).toBe("function")
+
+  const linkTree: Record<string, any> = {
+    type: "root",
+    children: [
+      { type: "paragraph", children: [{ type: "link", url: "/docs/getting-started", children: [] }] },
+      { type: "paragraph", children: [{ type: "link", url: "https://example.com", children: [] }] },
+    ],
+  }
+
+  rewriteRootRelativeMarkdownLinks?.()(linkTree)
+
+  expect(linkTree.children[0]?.children?.[0]?.url).toBe("/docs/getting-started")
+  expect(linkTree.children[1]?.children?.[0]?.url).toBe("https://example.com")
 
   const tree: Record<string, any> = {
     type: "root",
