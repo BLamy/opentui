@@ -11,7 +11,6 @@ import type {
   InjectionMapping,
 } from "./types.js"
 import { DownloadUtils } from "./download-utils.js"
-import { isMainThread } from "worker_threads"
 import { isBunfsPath, normalizeBunfsPath } from "../bunfs.js"
 
 const self = globalThis
@@ -19,6 +18,19 @@ const isBrowserWorkerRuntime =
   typeof WorkerGlobalScope !== "undefined" &&
   typeof globalThis !== "undefined" &&
   globalThis instanceof WorkerGlobalScope
+
+async function shouldStartWorkerRuntime(): Promise<boolean> {
+  if (isBrowserWorkerRuntime) {
+    return true
+  }
+
+  try {
+    const { isMainThread } = await import("worker_threads")
+    return !isMainThread
+  } catch {
+    return false
+  }
+}
 
 type ParserState = {
   parser: Parser
@@ -937,7 +949,12 @@ class ParserWorker {
     }
   }
 }
-if (!isMainThread) {
+
+void (async () => {
+  if (!(await shouldStartWorkerRuntime())) {
+    return
+  }
+
   const worker = new ParserWorker()
 
   function logMessage(type: "log" | "error" | "warn", ...args: any[]) {
@@ -1058,4 +1075,4 @@ if (!isMainThread) {
       })
     }
   }
-}
+})()
