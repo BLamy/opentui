@@ -42,6 +42,33 @@
         "web-tree-sitter": "0.25.10",
       },
     },
+    "packages/open-ink": {
+      "name": "open-ink",
+      "version": "0.1.90",
+      "dependencies": {
+        "@opentui/core": "workspace:*",
+        "react-reconciler": "^0.32.0",
+      },
+      "devDependencies": {
+        "@opentui/react-runtime": "workspace:*",
+        "@types/bun": "latest",
+        "@types/node": "^24.0.0",
+        "@types/react": "^19.0.0",
+        "@types/react-reconciler": "^0.32.0",
+        "@types/ws": "^8.18.1",
+        "react": ">=19.0.0",
+        "react-devtools-core": "^7.0.1",
+        "typescript": "^5",
+        "ws": "^8.18.0",
+      },
+      "peerDependencies": {
+        "react": ">=19.0.0",
+        "react-devtools-core": "^7.0.1",
+      },
+      "optionalPeers": [
+        "react-devtools-core",
+      ],
+    },
     "packages/react": {
       "name": "@opentui/react",
       "version": "0.1.97",
@@ -50,6 +77,7 @@
         "react-reconciler": "^0.32.0",
       },
       "devDependencies": {
+        "@opentui/react-runtime": "workspace:*",
         "@types/bun": "latest",
         "@types/node": "^24.0.0",
         "@types/react": "^19.0.0",
@@ -69,6 +97,24 @@
         "react-devtools-core",
         "ws",
       ],
+    },
+    "packages/react-runtime": {
+      "name": "@opentui/react-runtime",
+      "version": "0.1.90",
+      "dependencies": {
+        "@opentui/core": "workspace:*",
+        "react-reconciler": "^0.32.0",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "@types/react": "^19.0.0",
+        "@types/react-reconciler": "^0.32.0",
+        "react": ">=19.0.0",
+        "typescript": "^5",
+      },
+      "peerDependencies": {
+        "react": ">=19.0.0",
+      },
     },
     "packages/solid": {
       "name": "@opentui/solid",
@@ -115,6 +161,7 @@
         "babel-preset-solid": "1.9.10",
         "ghostty-web": "^0.3.0",
         "monaco-editor": "^0.55.1",
+        "open-ink": "workspace:*",
         "react": "^19.1.1",
         "solid-js": "^1.9.10",
       },
@@ -374,6 +421,8 @@
     "@opentui/core-win32-x64": ["@opentui/core-win32-x64@0.1.90", "", { "os": "win32", "cpu": "x64" }, "sha512-aVFyErckWp4oW9NJ/ZDKBUAlTlfVUiRXGP63JXFOoeqI7EYaM8uBt6rgZAJuUdFWCN2Q66WRS8Y2mk+0BJwVBg=="],
 
     "@opentui/react": ["@opentui/react@workspace:packages/react"],
+
+    "@opentui/react-runtime": ["@opentui/react-runtime@workspace:packages/react-runtime"],
 
     "@opentui/solid": ["@opentui/solid@workspace:packages/solid"],
 
@@ -1062,6 +1111,8 @@
     "oniguruma-parser": ["oniguruma-parser@0.12.1", "", {}, "sha512-8Unqkvk1RYc6yq2WBYRj4hdnsAxVze8i7iPfQr8e4uSP3tRv0rpZcbGUDvxfQQcdwHt/e9PrMvGCsa8OqG9X3w=="],
 
     "oniguruma-to-es": ["oniguruma-to-es@4.3.4", "", { "dependencies": { "oniguruma-parser": "^0.12.1", "regex": "^6.0.1", "regex-recursion": "^6.0.2" } }, "sha512-3VhUGN3w2eYxnTzHn+ikMI+fp/96KoRSVK9/kMTcFqj1NRDh2IhQCKvYxDnWePKRXY/AqH+Fuiyb7VHSzBjHfA=="],
+
+    "open-ink": ["open-ink@workspace:packages/open-ink"],
 
     "oxfmt": ["oxfmt@0.41.0", "", { "dependencies": { "tinypool": "2.1.0" }, "optionalDependencies": { "@oxfmt/binding-android-arm-eabi": "0.41.0", "@oxfmt/binding-android-arm64": "0.41.0", "@oxfmt/binding-darwin-arm64": "0.41.0", "@oxfmt/binding-darwin-x64": "0.41.0", "@oxfmt/binding-freebsd-x64": "0.41.0", "@oxfmt/binding-linux-arm-gnueabihf": "0.41.0", "@oxfmt/binding-linux-arm-musleabihf": "0.41.0", "@oxfmt/binding-linux-arm64-gnu": "0.41.0", "@oxfmt/binding-linux-arm64-musl": "0.41.0", "@oxfmt/binding-linux-ppc64-gnu": "0.41.0", "@oxfmt/binding-linux-riscv64-gnu": "0.41.0", "@oxfmt/binding-linux-riscv64-musl": "0.41.0", "@oxfmt/binding-linux-s390x-gnu": "0.41.0", "@oxfmt/binding-linux-x64-gnu": "0.41.0", "@oxfmt/binding-linux-x64-musl": "0.41.0", "@oxfmt/binding-openharmony-arm64": "0.41.0", "@oxfmt/binding-win32-arm64-msvc": "0.41.0", "@oxfmt/binding-win32-ia32-msvc": "0.41.0", "@oxfmt/binding-win32-x64-msvc": "0.41.0" }, "bin": { "oxfmt": "bin/oxfmt" } }, "sha512-sKLdJZdQ3bw6x9qKiT7+eID4MNEXlDHf5ZacfIircrq6Qwjk0L6t2/JQlZZrVHTXJawK3KaMuBoJnEJPcqCEdg=="],
 

@@ -99,19 +99,29 @@ const copyButtonTransformer = {
 
 const browserAliases = [
   { find: /^bun:ffi$/, replacement: fileURLToPath(new URL("./src/shims/bun-ffi.ts", import.meta.url)) },
+  { find: /^node:events$/, replacement: fileURLToPath(new URL("./src/shims/events.ts", import.meta.url)) },
   { find: /^node:fs\/promises$/, replacement: fileURLToPath(new URL("./src/shims/fs-promises.ts", import.meta.url)) },
   { find: /^node:fs$/, replacement: fileURLToPath(new URL("./src/shims/fs.ts", import.meta.url)) },
   { find: /^node:os$/, replacement: fileURLToPath(new URL("./src/shims/os.ts", import.meta.url)) },
   { find: /^node:path$/, replacement: fileURLToPath(new URL("./src/shims/path.ts", import.meta.url)) },
+  { find: /^node:process$/, replacement: fileURLToPath(new URL("./src/shims/process.ts", import.meta.url)) },
+  { find: /^node:stream$/, replacement: fileURLToPath(new URL("./src/shims/stream.ts", import.meta.url)) },
+  { find: /^node:util$/, replacement: fileURLToPath(new URL("./src/shims/util.ts", import.meta.url)) },
+  { find: /^node:console$/, replacement: fileURLToPath(new URL("./src/shims/console.ts", import.meta.url)) },
   {
     find: /^node:worker_threads$/,
     replacement: fileURLToPath(new URL("./src/shims/worker-threads.ts", import.meta.url)),
   },
+  { find: /^console$/, replacement: fileURLToPath(new URL("./src/shims/console.ts", import.meta.url)) },
+  { find: /^events$/, replacement: fileURLToPath(new URL("./src/shims/events.ts", import.meta.url)) },
   { find: /^fs\/promises$/, replacement: fileURLToPath(new URL("./src/shims/fs-promises.ts", import.meta.url)) },
   { find: /^fs$/, replacement: fileURLToPath(new URL("./src/shims/fs.ts", import.meta.url)) },
   { find: /^os$/, replacement: fileURLToPath(new URL("./src/shims/os.ts", import.meta.url)) },
   { find: /^path$/, replacement: fileURLToPath(new URL("./src/shims/path.ts", import.meta.url)) },
+  { find: /^process$/, replacement: fileURLToPath(new URL("./src/shims/process.ts", import.meta.url)) },
+  { find: /^stream$/, replacement: fileURLToPath(new URL("./src/shims/stream.ts", import.meta.url)) },
   { find: /^url$/, replacement: fileURLToPath(new URL("./src/shims/url.ts", import.meta.url)) },
+  { find: /^util$/, replacement: fileURLToPath(new URL("./src/shims/util.ts", import.meta.url)) },
   { find: /^worker_threads$/, replacement: fileURLToPath(new URL("./src/shims/worker-threads.ts", import.meta.url)) },
 ]
 

@@ -48,6 +48,12 @@ const ALL_PACKAGES: PackageConfig[] = [
     distDir: join(rootDir, "packages", "solid", "dist"),
     requiresCore: true,
   },
+  {
+    name: "open-ink",
+    rootDir: join(rootDir, "packages", "open-ink"),
+    distDir: join(rootDir, "packages", "open-ink", "dist"),
+    requiresCore: true,
+  },
 ]
 
 const PACKAGES = ALL_PACKAGES

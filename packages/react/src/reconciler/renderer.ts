@@ -3,13 +3,12 @@ import React, { type ReactNode } from "react"
 import type { OpaqueRoot } from "react-reconciler"
 import { AppContext } from "../components/app.js"
 import { ErrorBoundary } from "../components/error-boundary.js"
-import { _render, reconciler } from "./reconciler.js"
+import { reconciler, runtime } from "./runtime.js"
 
 // flushSync was renamed to flushSyncFromReconciler in react-reconciler 0.32.0
 // the types for react-reconciler are not up to date with the library
-const _r = reconciler as typeof reconciler & { flushSyncFromReconciler?: typeof reconciler.flushSync }
-const flushSync = _r.flushSyncFromReconciler ?? _r.flushSync
-const { createPortal } = reconciler
+const flushSync = runtime.flushSync
+const { createPortal } = runtime
 
 export type Root = {
   render: (node: ReactNode) => void
@@ -31,9 +30,8 @@ export function createRoot(renderer: CliRenderer): Root {
 
   const cleanup = () => {
     if (container) {
-      reconciler.updateContainer(null, container, null, () => {})
-      // @ts-expect-error the types for `react-reconciler` are not up to date with the library.
-      reconciler.flushSyncWork()
+      runtime.unmountContainer(container)
+      runtime.flushSyncWork()
       container = null
     }
   }
@@ -44,13 +42,14 @@ export function createRoot(renderer: CliRenderer): Root {
     render: (node: ReactNode) => {
       engine.attach(renderer)
 
-      container = _render(
+      container = runtime.createContainer(renderer.root)
+      runtime.updateContainer(
         React.createElement(
           AppContext.Provider,
           { value: { keyHandler: renderer.keyInput, renderer } },
           React.createElement(ErrorBoundary, null, node),
         ),
-        renderer.root,
+        container,
       )
     },
 
