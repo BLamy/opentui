@@ -6,7 +6,10 @@ export { isPreviewLanguage } from "./example-preview-languages"
 
 export interface CompiledExample {
   compiled: string
+  runtimeKind: PreviewRuntimeKind
 }
+
+export type PreviewRuntimeKind = "core" | "open-ink"
 
 interface ImportBinding {
   source: string
@@ -22,6 +25,14 @@ interface ParsedImports {
 }
 
 const CORE_IMPORT_SOURCES = new Set(["@opentui/core", "@opentui/core/browser"])
+const OPEN_INK_IMPORT_SOURCES = new Set([
+  ...CORE_IMPORT_SOURCES,
+  "open-ink",
+  "open-ink/browser",
+  "react",
+  "react/jsx-runtime",
+  "react/jsx-dev-runtime",
+])
 const CORE_RENDERABLE_CALLS = new Set([
   "ASCIIFont",
   "Box",
@@ -39,6 +50,14 @@ function getFileName(language: string): string {
   const normalized = normalizePreviewLanguage(language)
   if (normalized === "javascript" || normalized === "js") {
     return "example.js"
+  }
+
+  if (normalized === "jsx") {
+    return "example.jsx"
+  }
+
+  if (normalized === "tsx") {
+    return "example.tsx"
   }
 
   return "example.ts"
@@ -207,12 +226,42 @@ function addCoreBootstrap(code: string, language: string): string {
   return sections.join("\n\n")
 }
 
-function transformTypeScript(code: string, language: string): string {
+function resolvePreviewRuntimeKind(bindings: ImportBinding[], language: string): PreviewRuntimeKind {
+  const previewLanguage = normalizePreviewLanguage(language)
+
+  if (previewLanguage === "tsx" || previewLanguage === "jsx") {
+    return "open-ink"
+  }
+
+  for (const binding of bindings) {
+    if (binding.isTypeOnly) {
+      continue
+    }
+
+    if (
+      binding.source === "open-ink" ||
+      binding.source === "open-ink/browser" ||
+      binding.source === "react" ||
+      binding.source === "react/jsx-runtime" ||
+      binding.source === "react/jsx-dev-runtime"
+    ) {
+      return "open-ink"
+    }
+  }
+
+  return "core"
+}
+
+function transformTypeScript(code: string, language: string, runtimeKind: PreviewRuntimeKind): string {
+  const previewLanguage = normalizePreviewLanguage(language)
+  const usesJsx = runtimeKind === "open-ink" || previewLanguage === "tsx" || previewLanguage === "jsx"
+
   const result = ts.transpileModule(code, {
     compilerOptions: {
       target: ts.ScriptTarget.ES2022,
       module: ts.ModuleKind.ESNext,
-      jsx: ts.JsxEmit.None,
+      jsx: usesJsx ? ts.JsxEmit.ReactJSX : ts.JsxEmit.None,
+      jsxImportSource: usesJsx ? "react" : undefined,
       verbatimModuleSyntax: true,
     },
     fileName: getFileName(language),
@@ -221,7 +270,9 @@ function transformTypeScript(code: string, language: string): string {
   return result.outputText
 }
 
-function assertSupportedImports(bindings: ImportBinding[]): void {
+function assertSupportedImports(bindings: ImportBinding[], runtimeKind: PreviewRuntimeKind): void {
+  const supportedImports = runtimeKind === "open-ink" ? OPEN_INK_IMPORT_SOURCES : CORE_IMPORT_SOURCES
+
   for (const binding of bindings) {
     if (binding.isTypeOnly || !binding.source) {
       continue
@@ -231,7 +282,7 @@ function assertSupportedImports(bindings: ImportBinding[]): void {
       throw new Error(`Side-effect imports from "${binding.source}" are not previewable in the browser runtime yet.`)
     }
 
-    if (!CORE_IMPORT_SOURCES.has(binding.source)) {
+    if (!supportedImports.has(binding.source)) {
       throw new Error(`Imports from "${binding.source}" are not previewable in the browser runtime yet.`)
     }
   }
@@ -288,17 +339,19 @@ export async function compileExample(code: string, language: string): Promise<Co
   }
 
   const parsed = parseImports(normalized, previewLanguage)
-  assertSupportedImports(parsed.bindings)
+  const runtimeKind = resolvePreviewRuntimeKind(parsed.bindings, previewLanguage)
+  assertSupportedImports(parsed.bindings, runtimeKind)
 
-  const executableSource = addCoreBootstrap(parsed.body, previewLanguage)
-  const transpiled = transformTypeScript(executableSource, previewLanguage)
+  const executableSource = runtimeKind === "core" ? addCoreBootstrap(parsed.body, previewLanguage) : parsed.body
+  const transpiled = transformTypeScript(executableSource, previewLanguage, runtimeKind)
   const transformedImports = parseImports(transpiled, "js")
-  assertSupportedImports(transformedImports.bindings)
+  assertSupportedImports(transformedImports.bindings, runtimeKind)
 
   const body = stripEmptyModuleExport(transformedImports.body)
   const prelude = buildPrelude([...parsed.bindings, ...transformedImports.bindings])
 
   return {
     compiled: `${prelude.join("\n")}\n\nwith (__scope) {\n${body}\n}`,
+    runtimeKind,
   }
 }

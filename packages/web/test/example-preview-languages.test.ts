@@ -38,10 +38,11 @@ test("falls back to plaintext for unsupported editor languages", () => {
   expect(getEditorModelExtension("")).toBe(".txt")
 })
 
-test("keeps browser preview support limited to JavaScript and TypeScript", () => {
+test("keeps browser preview support limited to JavaScript and TypeScript-family snippets", () => {
   expect(isPreviewLanguage("example")).toBe(true)
   expect(isPreviewLanguage("typescript")).toBe(true)
   expect(isPreviewLanguage("js")).toBe(true)
-  expect(isPreviewLanguage("tsx")).toBe(false)
+  expect(isPreviewLanguage("tsx")).toBe(true)
+  expect(isPreviewLanguage("jsx")).toBe(true)
   expect(isPreviewLanguage("bash")).toBe(false)
 })

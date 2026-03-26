@@ -22,7 +22,7 @@ type FixtureState = typeof globalThis & {
 }
 
 const tempRoot = mkdtempSync(join(tmpdir(), "react-runtime-plugin-support-fixture-"))
-const entryPath = join(tempRoot, "entry.ts")
+const entryPath = join(tempRoot, "entry.mjs")
 
 const source = [
   'import * as core from "@opentui/core"',
@@ -33,8 +33,7 @@ const source = [
   'import * as react from "react"',
   'import * as reactJsx from "react/jsx-runtime"',
   'import * as reactJsxDev from "react/jsx-dev-runtime"',
-  "const state = globalThis as { __reactRuntimeHost__?: { core: Record<string, unknown>; coreTesting: Record<string, unknown>; opentuiReact: Record<string, unknown>; opentuiReactJsx: Record<string, unknown>; opentuiReactJsxDev: Record<string, unknown>; react: Record<string, unknown>; reactJsx: Record<string, unknown>; reactJsxDev: Record<string, unknown> } }",
-  "const host = state.__reactRuntimeHost__",
+  "const host = globalThis.__reactRuntimeHost__",
   "const checks = [",
   "  `core=${core.engine === host?.core.engine}`,",
   "  `coreTesting=${coreTesting.createTestRenderer === host?.coreTesting.createTestRenderer}`,",
@@ -67,7 +66,7 @@ registerPlugin.clearAll()
 
 try {
   await import("../scripts/runtime-plugin-support")
-  await import(entryPath)
+  await import(`${entryPath}?reload=1`)
 } finally {
   registerPlugin.clearAll()
   delete state.__reactRuntimeHost__

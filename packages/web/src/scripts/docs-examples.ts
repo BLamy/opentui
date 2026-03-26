@@ -245,6 +245,7 @@ async function mountCodeEditor(codePane: HTMLDivElement, code: string, language:
       code,
       language,
       ariaLabel: "Editable example code",
+      viewportElement: codePane,
     })
   } catch (error) {
     host.remove()

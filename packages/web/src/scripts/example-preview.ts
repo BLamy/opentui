@@ -1,4 +1,4 @@
-import { BrowserRenderEvents, RGBA, createBrowserRenderer, loadBrowserRenderLib } from "@opentui/core/browser"
+import { RGBA, createBrowserRenderer, loadBrowserRenderLib } from "@opentui/core/browser"
 
 import {
   type BrowserTerminalSession,
@@ -14,7 +14,7 @@ import {
   getPreferredThemeMode,
   type ThemeMode,
 } from "./docs-example-theme"
-import { compileExample } from "./example-preview-compiler"
+import { compileExample, type PreviewRuntimeKind } from "./example-preview-compiler"
 import {
   isPreviewFrameActiveInParentDocument,
   shouldAutoFocusPreview,
@@ -33,10 +33,12 @@ interface PreviewMessage {
 interface PreviewRuntime {
   modules: Record<string, Record<string, unknown>>
   scope: Record<string, unknown>
+  hasOutput(): boolean
 }
 
 type PreviewSession = BrowserTerminalSession & {
-  renderer: Awaited<ReturnType<typeof createBrowserRenderer>>
+  cleanupTasks: Set<() => void>
+  renderer: Awaited<ReturnType<typeof createBrowserRenderer>> | null
 }
 
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as new (
@@ -54,6 +56,10 @@ let currentSession: PreviewSession | null = null
 let latestPayload: PreviewMessage | null = null
 let browserCoreModulePromise: Promise<Record<string, unknown>> | null = null
 let browserModulePromise: Promise<Record<string, unknown>> | null = null
+let openInkPreviewRuntimePromise: Promise<typeof import("./doc-preview-open-ink-runtime")> | null = null
+let reactRuntimePromise: Promise<Record<string, unknown>> | null = null
+let reactJsxRuntimePromise: Promise<Record<string, unknown>> | null = null
+let reactJsxDevRuntimePromise: Promise<Record<string, unknown>> | null = null
 let renderLibPromise: Promise<unknown> | null = null
 let runCounter = 0
 
@@ -109,7 +115,12 @@ function destroyPreviewSession(session: PreviewSession | null): void {
     return
   }
 
-  session.renderer.destroy()
+  for (const cleanup of [...session.cleanupTasks]) {
+    cleanup()
+  }
+
+  session.cleanupTasks.clear()
+  session.renderer?.destroy()
   session.destroy()
 }
 
@@ -127,6 +138,38 @@ async function ensureBrowserModule(): Promise<Record<string, unknown>> {
   }
 
   return browserModulePromise
+}
+
+async function ensureOpenInkPreviewRuntime(): Promise<typeof import("./doc-preview-open-ink-runtime")> {
+  if (!openInkPreviewRuntimePromise) {
+    openInkPreviewRuntimePromise = import("./doc-preview-open-ink-runtime")
+  }
+
+  return openInkPreviewRuntimePromise
+}
+
+async function ensureReactRuntime(): Promise<Record<string, unknown>> {
+  if (!reactRuntimePromise) {
+    reactRuntimePromise = import("react") as Promise<Record<string, unknown>>
+  }
+
+  return reactRuntimePromise
+}
+
+async function ensureReactJsxRuntime(): Promise<Record<string, unknown>> {
+  if (!reactJsxRuntimePromise) {
+    reactJsxRuntimePromise = import("react/jsx-runtime") as Promise<Record<string, unknown>>
+  }
+
+  return reactJsxRuntimePromise
+}
+
+async function ensureReactJsxDevRuntime(): Promise<Record<string, unknown>> {
+  if (!reactJsxDevRuntimePromise) {
+    reactJsxDevRuntimePromise = import("react/jsx-dev-runtime") as Promise<Record<string, unknown>>
+  }
+
+  return reactJsxDevRuntimePromise
 }
 
 async function ensureRenderLib(wasmUrl: string): Promise<void> {
@@ -152,28 +195,83 @@ function createPreviewScope(
   return scope
 }
 
-async function createRuntime(session: PreviewSession): Promise<PreviewRuntime> {
+async function ensureCoreRenderer(session: PreviewSession): Promise<Awaited<ReturnType<typeof createBrowserRenderer>>> {
+  if (session.renderer) {
+    return session.renderer
+  }
+
+  const read = () => createDocsExampleCssVarReader()
+  session.renderer = await createBrowserRenderer(session.host, {
+    useAlternateScreen: true,
+    backgroundColor: RGBA.fromHex(getDocsExampleRendererBackground(session.themeMode, read())),
+  })
+
+  return session.renderer
+}
+
+async function createRuntimeForKind(session: PreviewSession, runtimeKind: PreviewRuntimeKind): Promise<PreviewRuntime> {
   const browserProcess = ensureBrowserProcessShim()
   const [coreRuntime, browserRuntime] = await Promise.all([ensureBrowserCore(), ensureBrowserModule()])
 
-  const coreModule = {
-    ...coreRuntime,
-    createCliRenderer: async () => session.renderer,
+  if (runtimeKind === "open-ink") {
+    const [{ createOpenInkPreviewModule }, reactRuntime, reactJsxRuntime, reactJsxDevRuntime] = await Promise.all([
+      ensureOpenInkPreviewRuntime(),
+      ensureReactRuntime(),
+      ensureReactJsxRuntime(),
+      ensureReactJsxDevRuntime(),
+    ])
+    const read = () => createDocsExampleCssVarReader()
+    const openInkModule = createOpenInkPreviewModule(session.host, {
+      backgroundColor: getDocsExampleRendererBackground(session.themeMode, read()),
+    })
+
+    session.cleanupTasks.add(() => {
+      openInkModule.__cleanup()
+    })
+
+    const unsupportedCreateCliRenderer = async () => {
+      throw new Error('createCliRenderer() is not available in open-ink preview examples. Import render() from "open-ink" instead.')
+    }
+
+    const modules: Record<string, Record<string, unknown>> = {
+      "@opentui/core": {
+        ...coreRuntime,
+        createCliRenderer: unsupportedCreateCliRenderer,
+      },
+      "@opentui/core/browser": {
+        ...browserRuntime,
+        createCliRenderer: unsupportedCreateCliRenderer,
+      },
+      react: reactRuntime,
+      "react/jsx-runtime": reactJsxRuntime,
+      "react/jsx-dev-runtime": reactJsxDevRuntime,
+      "open-ink": openInkModule,
+      "open-ink/browser": openInkModule,
+    }
+
+    return {
+      modules,
+      scope: createPreviewScope(modules, browserProcess),
+      hasOutput: () => openInkModule.__hasRendered(),
+    }
   }
 
-  const browserModule = {
-    ...browserRuntime,
-    createCliRenderer: async () => session.renderer,
-  }
-
+  const renderer = await ensureCoreRenderer(session)
   const modules: Record<string, Record<string, unknown>> = {
-    "@opentui/core": coreModule,
-    "@opentui/core/browser": browserModule,
+    "@opentui/core": {
+      ...coreRuntime,
+      createCliRenderer: async () => renderer,
+    },
+    "@opentui/core/browser": {
+      ...browserRuntime,
+      createCliRenderer: async () => renderer,
+    },
   }
 
   return {
     modules,
     scope: createPreviewScope(modules, browserProcess),
+    hasOutput: () => renderer.root.getChildrenCount() > 0,
   }
 }
 
@@ -182,13 +280,24 @@ function isThemeMode(mode: TerminalThemeMode): mode is ThemeMode {
 }
 
 function wirePreviewThemeRemount(session: PreviewSession): void {
-  session.renderer.on(BrowserRenderEvents.THEME_MODE, (mode: TerminalThemeMode) => {
-    if (!isThemeMode(mode) || mode === session.themeMode) {
+  let initialized = false
+  const removeListener = session.host.onThemeModeChange((mode: TerminalThemeMode) => {
+    const previousMode = session.themeMode
+    session.themeMode = mode
+
+    if (!initialized) {
+      initialized = true
+      return
+    }
+
+    if (!isThemeMode(mode) || mode === previousMode) {
       return
     }
 
     void rerenderLatestPreview(mode)
   })
+
+  session.cleanupTasks.add(removeListener)
 }
 
 async function createSession(themeMode: ThemeMode, autoFocus: boolean): Promise<PreviewSession> {
@@ -214,14 +323,10 @@ async function createSession(themeMode: ThemeMode, autoFocus: boolean): Promise<
     const wasmUrl = root.dataset.wasmUrl ?? withBase("/opentui/opentui.wasm")
     await ensureRenderLib(wasmUrl)
 
-    const renderer = await createBrowserRenderer(terminalSession.host, {
-      useAlternateScreen: true,
-      backgroundColor: RGBA.fromHex(getDocsExampleRendererBackground(themeMode, read())),
-    })
-
     const session: PreviewSession = {
       ...terminalSession,
-      renderer,
+      cleanupTasks: new Set(),
+      renderer: null,
     }
 
     wirePreviewThemeRemount(session)
@@ -253,13 +358,13 @@ async function renderPreview(
     options.themeMode ?? getPreferredThemeMode(),
     shouldAutoFocusPreview(focusSnapshot),
   )
+  const { compiled, runtimeKind } = await compileExample(payload.code, payload.language)
 
   if (runId !== runCounter) {
     return
   }
 
-  const runtime = await createRuntime(session)
-  const { compiled } = await compileExample(payload.code, payload.language)
+  const runtime = await createRuntimeForKind(session, runtimeKind)
 
   if (runId !== runCounter) {
     return
@@ -272,11 +377,11 @@ async function renderPreview(
     return
   }
 
-  if (session.renderer.root.getChildrenCount() === 0) {
-    throw new Error("The snippet ran, but it did not add anything to the renderer root.")
+  if (!runtime.hasOutput()) {
+    throw new Error("The snippet ran, but it did not render anything visible.")
   }
 
-  session.renderer.requestRender()
+  session.renderer?.requestRender()
   clearStatus()
 }
 

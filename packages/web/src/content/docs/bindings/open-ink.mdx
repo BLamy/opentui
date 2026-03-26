@@ -1,0 +1,382 @@
+---
+title: Open Ink
+description: Ink-compatible React rendering powered by OpenTUI
+order: 3
+---
+
+# Open Ink
+
+`open-ink` is the Ink-compatible layer for OpenTUI. You keep Ink-style `render`, `Box`, `Text`, and hooks, but the runtime is backed by the OpenTUI renderer.
+
+## Installation
+
+```bash
+bun install open-ink @opentui/core react
+```
+
+## Live examples
+
+The editable examples below use the normal `open-ink` import. In these docs, the code is compiled in the browser and mounted into the embedded OpenTUI surface automatically. The examples cover `Box`, `Text`, `Newline`, `Spacer`, `Static`, and `Transform`.
+
+### Drop-in hello world
+
+```tsx example
+import { Box, Text, render } from "open-ink"
+
+function App() {
+  return (
+    <Box border borderStyle="round" paddingX={1}>
+      <Text color="green" bold>
+        Hello from open-ink
+      </Text>
+    </Box>
+  )
+}
+
+render(<App />)
+```
+
+### Text helpers
+
+```tsx example
+import { Box, Newline, Spacer, Text, render } from "open-ink"
+
+function App() {
+  return (
+    <Box border paddingX={1} flexDirection="column">
+      <Box>
+        <Text bold>left</Text>
+        <Spacer />
+        <Text color="cyan">right</Text>
+      </Box>
+      <Text>
+        first line
+        <Newline />
+        second line
+        <Newline count={2} />
+        fourth line
+      </Text>
+    </Box>
+  )
+}
+
+render(<App />)
+```
+
+### Interactive input
+
+```tsx example
+import { Box, Text, render, useInput } from "open-ink"
+import { useState } from "react"
+
+function App() {
+  const [count, setCount] = useState(0)
+
+  useInput((input, key) => {
+    if (key.leftArrow) {
+      setCount((current) => current - 1)
+      return
+    }
+
+    if (key.rightArrow) {
+      setCount((current) => current + 1)
+      return
+    }
+
+    if (input === "r") {
+      setCount(0)
+    }
+  })
+
+  return (
+    <Box border borderStyle="single" padding={1} flexDirection="column">
+      <Text bold>Open Ink counter</Text>
+      <Text>Value: {count}</Text>
+      <Text dimColor>Use left/right arrows. Press r to reset.</Text>
+    </Box>
+  )
+}
+
+render(<App />)
+```
+
+### State throughput
+
+```tsx example
+import { Box, Spacer, Text, render } from "open-ink"
+import { useEffect, useRef, useState } from "react"
+
+function App() {
+  const [count, setCount] = useState(0)
+  const [fps, setFps] = useState(0)
+  const frameCount = useRef(0)
+  const lastSample = useRef(performance.now())
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCount((current) => current + 1)
+    }, 1)
+
+    return () => {
+      clearInterval(interval)
+    }
+  }, [])
+
+  useEffect(() => {
+    frameCount.current += 1
+    const now = performance.now()
+    const elapsed = now - lastSample.current
+
+    if (elapsed >= 1000) {
+      setFps(Math.round((frameCount.current * 1000) / elapsed))
+      frameCount.current = 0
+      lastSample.current = now
+    }
+  }, [count])
+
+  return (
+    <Box border paddingX={1} flexDirection="column">
+      <Box>
+        <Text bold>Counter: {count}</Text>
+        <Spacer />
+        <Text color="cyan">FPS: {fps}</Text>
+      </Box>
+      <Text dimColor>Counter updates from a 1ms setInterval and lives in React state.</Text>
+    </Box>
+  )
+}
+
+render(<App />)
+```
+
+### Mock Claude-Code-style chat
+
+```tsx example
+import { Box, Spacer, Text, render, useInput, usePaste } from "open-ink"
+import { useEffect, useRef, useState } from "react"
+
+const MOCK_RESPONSES = [
+  "Mock agent: I can sketch the next step, summarize the diff, or fake a tool result.",
+  "Mock agent: This is only local state, but the interaction loop feels like a coding chat.",
+  "Mock agent: Try another prompt. I will keep replying with canned data.",
+]
+
+function App() {
+  const [draft, setDraft] = useState("")
+  const [isResponding, setIsResponding] = useState(false)
+  const [messages, setMessages] = useState([
+    {
+      id: 1,
+      role: "assistant",
+      text: "Mock agent ready. Type a request and press enter.",
+    },
+  ])
+  const nextMessageId = useRef(2)
+  const nextReplyIndex = useRef(0)
+  const pendingReply = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const sendMessage = (value: string) => {
+    const trimmed = value.trim()
+    if (!trimmed || isResponding) {
+      return
+    }
+
+    setMessages((current) => [
+      ...current,
+      {
+        id: nextMessageId.current++,
+        role: "user",
+        text: trimmed,
+      },
+    ])
+    setDraft("")
+    setIsResponding(true)
+
+    const reply = MOCK_RESPONSES[nextReplyIndex.current % MOCK_RESPONSES.length]
+    nextReplyIndex.current += 1
+
+    pendingReply.current = setTimeout(() => {
+      setMessages((current) => [
+        ...current,
+        {
+          id: nextMessageId.current++,
+          role: "assistant",
+          text: reply,
+        },
+      ])
+      setIsResponding(false)
+      pendingReply.current = null
+    }, 450)
+  }
+
+  useInput((input, key) => {
+    if (key.return) {
+      sendMessage(draft)
+      return
+    }
+
+    if (key.escape) {
+      setDraft("")
+      return
+    }
+
+    if (key.backspace || key.delete) {
+      setDraft((current) => current.slice(0, -1))
+      return
+    }
+
+    if (!key.ctrl && !key.meta && input) {
+      setDraft((current) => current + input)
+    }
+  })
+
+  usePaste((text) => {
+    const normalized = text.replace(/\s+/g, " ").trim()
+    if (!normalized) {
+      return
+    }
+
+    setDraft((current) => current + normalized)
+  })
+
+  useEffect(() => {
+    return () => {
+      if (pendingReply.current) {
+        clearTimeout(pendingReply.current)
+      }
+    }
+  }, [])
+
+  const visibleMessages = messages.slice(-6)
+
+  return (
+    <Box border padding={1} flexDirection="column">
+      <Box>
+        <Text bold>claude-code</Text>
+        <Spacer />
+        <Text color={isResponding ? "yellow" : "green"}>{isResponding ? "mock thinking" : "idle"}</Text>
+      </Box>
+
+      <Box marginTop={1}>
+        <Box border width={20} paddingX={1} flexDirection="column">
+          <Text bold>Session</Text>
+          <Text color="cyan">mock-chat</Text>
+          <Text dimColor>branch main</Text>
+          <Text> </Text>
+          <Text bold>Context</Text>
+          <Text>packages/open-ink</Text>
+          <Text>packages/web</Text>
+          <Text> </Text>
+          <Text bold>Commands</Text>
+          <Text>/plan</Text>
+          <Text>/review</Text>
+          <Text>/ship</Text>
+        </Box>
+
+        <Box border flexGrow={1} marginLeft={1} paddingX={1} flexDirection="column">
+          <Text bold>Transcript</Text>
+          <Text dimColor>Mock replies only. No model calls.</Text>
+          <Text> </Text>
+
+          {visibleMessages.map((message) => (
+            <Box key={message.id} flexDirection="column" marginBottom={1}>
+              <Box>
+                <Text color={message.role === "assistant" ? "green" : "cyan"} bold>
+                  {message.role === "assistant" ? "Assistant" : "You"}
+                </Text>
+                <Spacer />
+                <Text dimColor>{message.role === "assistant" ? "mock" : "local"}</Text>
+              </Box>
+              <Text>{message.text}</Text>
+            </Box>
+          ))}
+        </Box>
+      </Box>
+
+      <Box border marginTop={1} paddingX={1} flexDirection="column">
+        <Box>
+          <Text color="cyan">{">"}</Text>
+          <Text>{draft || "Type a message..."}</Text>
+        </Box>
+        <Box>
+          <Text dimColor>enter send</Text>
+          <Spacer />
+          <Text dimColor>esc clear</Text>
+        </Box>
+      </Box>
+    </Box>
+  )
+}
+
+render(<App />)
+```
+
+### Static output
+
+```tsx example
+import { Box, Static, Text, render } from "open-ink"
+
+function App() {
+  const completed = ["compile types", "warm preview host", "mount app"]
+
+  return (
+    <Box flexDirection="column">
+      <Static items={completed}>
+        {(step, index) => (
+          <Text key={step} color="green">
+            done {index + 1}: {step}
+          </Text>
+        )}
+      </Static>
+      <Box border paddingX={1}>
+        <Text bold>Live region stays below the static log.</Text>
+      </Box>
+    </Box>
+  )
+}
+
+render(<App />)
+```
+
+### Transform output
+
+```tsx example
+import { Box, Newline, Transform, render } from "open-ink"
+
+function App() {
+  return (
+    <Box border paddingX={1}>
+      <Transform transform={(line, index) => `${index + 1}. ${line.toUpperCase()}`}>
+        alpha
+        <Newline />
+        bravo
+        <Newline />
+        charlie
+      </Transform>
+    </Box>
+  )
+}
+
+render(<App />)
+```
+
+## Browser entry
+
+If you are explicitly targeting a browser host, you can also import from `open-ink/browser`:
+
+```tsx
+import { Box, Text, render } from "open-ink/browser"
+
+render(
+  <Box border>
+    <Text>Browser host ready</Text>
+  </Box>,
+  { host },
+)
+```
+
+## Notes
+
+- The root `open-ink` entry is intended to stay Ink-shaped for CLI apps.
+- The docs preview swaps in the browser adapter under the hood so the same component code can run in the page.
+- For lower-level React JSX intrinsic elements, use [`@opentui/react`](/docs/bindings/react).

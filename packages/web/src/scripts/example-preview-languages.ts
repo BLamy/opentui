@@ -7,7 +7,7 @@ const PREVIEW_LANGUAGE_ALIASES = new Map([
   ["js", "javascript"],
   ["jsx", "jsx"],
 ])
-const PREVIEW_LANGUAGES = new Set(["typescript", "ts", "javascript", "js", "example"])
+const PREVIEW_LANGUAGES = new Set(["typescript", "ts", "tsx", "javascript", "js", "jsx", "example"])
 const EDITOR_LANGUAGE_MAP = new Map([
   ["typescript", "typescript"],
   ["ts", "typescript"],

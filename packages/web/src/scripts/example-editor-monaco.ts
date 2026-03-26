@@ -13,12 +13,19 @@ import {
   getPreferredThemeMode,
   resolveThemeMode,
 } from "./docs-example-theme"
+import {
+  createDocsExampleMonacoCompilerOptions,
+  createDocsExampleMonacoEditorOptions,
+  resolveDocsExampleMonacoViewportHeight,
+} from "./example-editor-monaco-config"
+import { ensureDocsExampleMonacoTypes } from "./example-editor-monaco-types-source"
 import { getEditorLanguage, getEditorModelExtension } from "./example-preview-languages"
 
 interface EditorOptions {
   code: string
   language: string
   ariaLabel: string
+  viewportElement?: HTMLElement | null
 }
 
 interface MonacoHostElement extends HTMLElement {
@@ -35,7 +42,7 @@ export interface DocExampleEditor {
 type MonacoModule = typeof Monaco
 
 let monacoPromise: Promise<MonacoModule> | null = null
-let themeConfigured = false
+let defaultsConfigured = false
 let modelSequence = 0
 
 function getMonaco(): Promise<MonacoModule> {
@@ -77,10 +84,10 @@ function applyTheme(monaco: MonacoModule): void {
   monaco.editor.setTheme(DOCS_EXAMPLE_MONACO_THEME)
 }
 
-function ensureTheme(monaco: MonacoModule): void {
+function ensureDefaults(monaco: MonacoModule): void {
   applyTheme(monaco)
 
-  if (themeConfigured) {
+  if (defaultsConfigured) {
     return
   }
 
@@ -94,15 +101,7 @@ function ensureTheme(monaco: MonacoModule): void {
     })
   })
 
-  const compilerOptions = {
-    allowJs: true,
-    allowNonTsExtensions: true,
-    target: monaco.languages.typescript.ScriptTarget.ES2022,
-    module: monaco.languages.typescript.ModuleKind.ESNext,
-    moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-    jsx: monaco.languages.typescript.JsxEmit.Preserve,
-    esModuleInterop: true,
-  }
+  const compilerOptions = createDocsExampleMonacoCompilerOptions(monaco.languages.typescript)
 
   monaco.languages.typescript.typescriptDefaults.setCompilerOptions(compilerOptions)
   monaco.languages.typescript.javascriptDefaults.setCompilerOptions(compilerOptions)
@@ -117,7 +116,9 @@ function ensureTheme(monaco: MonacoModule): void {
     noSyntaxValidation: false,
   })
 
-  themeConfigured = true
+  ensureDocsExampleMonacoTypes(monaco)
+
+  defaultsConfigured = true
 }
 
 function createEditorModelUri(monaco: MonacoModule, language: string): Monaco.Uri {
@@ -128,7 +129,7 @@ function createEditorModelUri(monaco: MonacoModule, language: string): Monaco.Ur
 
 export async function mountMonacoEditor(host: HTMLElement, options: EditorOptions): Promise<DocExampleEditor> {
   const monaco = await getMonaco()
-  ensureTheme(monaco)
+  ensureDefaults(monaco)
 
   const target = host as MonacoHostElement
   const language = getEditorLanguage(options.language)
@@ -137,40 +138,23 @@ export async function mountMonacoEditor(host: HTMLElement, options: EditorOption
     language,
     createEditorModelUri(monaco, options.language),
   )
-  const editor = monaco.editor.create(target, {
-    model,
-    theme: DOCS_EXAMPLE_MONACO_THEME,
-    ariaLabel: options.ariaLabel,
-    automaticLayout: true,
-    minimap: { enabled: false },
-    scrollBeyondLastLine: false,
-    smoothScrolling: true,
-    lineNumbers: "off",
-    glyphMargin: false,
-    folding: false,
-    renderLineHighlight: "none",
-    overviewRulerLanes: 0,
-    hideCursorInOverviewRuler: true,
-    wordWrap: "off",
-    fontFamily: getEditorFontFamily(),
-    fontSize: 13,
-    lineHeight: 22,
-    padding: { top: 18, bottom: 18 },
-    tabSize: 2,
-    insertSpaces: true,
-    scrollbar: {
-      useShadows: false,
-      alwaysConsumeMouseWheel: false,
-      verticalScrollbarSize: 10,
-      horizontalScrollbarSize: 10,
-    },
-    unicodeHighlight: {
-      ambiguousCharacters: false,
-    },
-  })
+  const editor = monaco.editor.create(
+    target,
+    createDocsExampleMonacoEditorOptions({
+      ariaLabel: options.ariaLabel,
+      fontFamily: getEditorFontFamily(),
+      model,
+      theme: DOCS_EXAMPLE_MONACO_THEME,
+    }),
+  )
+
+  const viewportElement = options.viewportElement ?? host.parentElement
 
   const resize = () => {
-    const nextHeight = Math.max(editor.getContentHeight(), 280)
+    const nextHeight = resolveDocsExampleMonacoViewportHeight(
+      editor.getContentHeight(),
+      viewportElement?.clientHeight ?? 0,
+    )
     if (host.style.height !== `${nextHeight}px`) {
       host.style.height = `${nextHeight}px`
     }
@@ -185,6 +169,13 @@ export async function mountMonacoEditor(host: HTMLElement, options: EditorOption
   target.__docExampleEditor = editor
 
   const contentSizeListener = editor.onDidContentSizeChange(() => resize())
+  const resizeObserver =
+    viewportElement && typeof ResizeObserver === "function"
+      ? new ResizeObserver(() => {
+          resize()
+        })
+      : null
+  resizeObserver?.observe(viewportElement)
   window.requestAnimationFrame(() => resize())
 
   return {
@@ -223,6 +214,7 @@ export async function mountMonacoEditor(host: HTMLElement, options: EditorOption
     },
     dispose: () => {
       contentSizeListener.dispose()
+      resizeObserver?.disconnect()
       editor.getModel()?.dispose()
       editor.dispose()
       delete target.__docExampleEditor

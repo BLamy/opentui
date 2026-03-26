@@ -18,6 +18,7 @@
     "@opentui/core": "workspace:*",
     "@opentui/react": "workspace:*",
     "@opentui/solid": "workspace:*",
+    "open-ink": "workspace:*",
     "astro": "5.10.2",
     "babel-preset-solid": "1.9.10",
     "ghostty-web": "^0.3.0",

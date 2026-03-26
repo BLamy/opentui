@@ -15,7 +15,9 @@
     "baseUrl": ".",
     "paths": {
       "@opentui/core": ["../core/dist"],
-      "@opentui/core/*": ["../core/dist/*"]
+      "@opentui/core/*": ["../core/dist/*"],
+      "@opentui/react-runtime": ["../react-runtime/dist"],
+      "@opentui/react-runtime/*": ["../react-runtime/dist/*"]
     }
   },
   "include": [
