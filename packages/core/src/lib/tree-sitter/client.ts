@@ -35,6 +35,11 @@ interface EditQueueItem {
 }
 
 let DEFAULT_PARSERS: FiletypeParserOptions[] | undefined
+const dynamicImport = new Function("specifier", "return import(specifier)") as <
+  TModule = Record<string, unknown>,
+>(
+  specifier: string,
+) => Promise<TModule>
 
 function isBrowserDefaultParsersRuntime(): boolean {
   return typeof window !== "undefined" && typeof document !== "undefined"
@@ -49,7 +54,7 @@ async function ensureDefaultParsers(): Promise<FiletypeParserOptions[]> {
     isBrowserDefaultParsersRuntime() ? "./default-parsers-browser.ts" : "./default-parsers.js",
     import.meta.url,
   ).href
-  const { getParsers } = await import(/* @vite-ignore */ defaultParsersModule)
+  const { getParsers } = await dynamicImport<{ getParsers: () => FiletypeParserOptions[] }>(defaultParsersModule)
   DEFAULT_PARSERS = getParsers()
   return DEFAULT_PARSERS
 }
