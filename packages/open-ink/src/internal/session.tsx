@@ -8,6 +8,12 @@ import { BrowserRenderEvents, BrowserRenderer } from "@opentui/core/browser"
 import type { CliRendererConfig, KeyEvent, PasteEvent } from "@opentui/core"
 import type { BrowserRendererConfig, BrowserTerminalHost } from "@opentui/core/browser"
 import { runtime } from "./runtime.js"
+import {
+  defaultInteractive,
+  defaultScreenReaderEnabled,
+  normalizeKittyKeyboardOptions,
+  type KittyKeyboardOptions,
+} from "./options.js"
 import { SessionContext } from "../context/session.js"
 import { AppContext } from "../context/app.js"
 import { StdinContext, type StdinContextValue } from "../context/stdin.js"
@@ -30,10 +36,7 @@ type FocusEntry = {
 }
 
 export interface RenderMetrics {
-  width: number
-  height: number
-  columns: number
-  rows: number
+  renderTime: number
 }
 
 interface SessionOptions {
@@ -67,6 +70,10 @@ function createReadStreamLike(): NodeJS.ReadStream {
   stream.isTTY = true
   stream.setRawMode = () => stream
   return stream
+}
+
+function nowMs(): number {
+  return globalThis.performance?.now() ?? Date.now()
 }
 
 function getFocusableIds(entries: FocusEntry[]): string[] {
@@ -112,7 +119,7 @@ function createSyncCliRenderer(config: CliRendererConfig, setupTerminal: boolean
   }
 
   if (config.useThread === undefined) {
-    config.useThread = true
+    config.useThread = !(config.testing ?? false)
   }
 
   if (process.platform === "linux") {
@@ -159,9 +166,11 @@ export class OpenInkSession {
   private appendStaticEntry?: (node: React.ReactNode) => void
   private clearStaticEntries?: () => void
   private lastFrame = ""
+  private lastRenderStartedAt = 0
   private destroyed = false
   private unmounting = false
   private rawModeRequests = 0
+  private bracketedPasteRequests = 0
   private renderCount = 0
   private originalConsole: Partial<typeof console> | null = null
   private exitResolve!: (value: unknown) => void
@@ -231,6 +240,7 @@ export class OpenInkSession {
     }
 
     this.currentNode = node
+    this.lastRenderStartedAt = nowMs()
     this.lastRenderFlush = this.interactive ? this.createFlushPromise() : Promise.resolve()
     const wrappedNode = React.createElement(RootShell, {
       key: `root-${this.renderCount++}`,
@@ -316,30 +326,50 @@ export class OpenInkSession {
 
     this.destroyed = true
     this.restoreConsole()
+    if (this.stdout.isTTY && this.bracketedPasteRequests > 0) {
+      this.stdout.write("\u001B[?2004l")
+    }
     this.renderer.destroy()
   }
 
   public setRawMode = (value: boolean): void => {
     const setRawMode = (this.stdin as NodeJS.ReadStream & { setRawMode?: (value: boolean) => void }).setRawMode
     if (!setRawMode) {
-      return
+      throw new Error("stdin does not support raw mode")
     }
 
     if (value) {
       this.rawModeRequests += 1
-      if (this.rawModeRequests === 1 && !this.interactive) {
+      if (this.rawModeRequests === 1) {
         setRawMode.call(this.stdin, true)
       }
       return
     }
 
     this.rawModeRequests = Math.max(0, this.rawModeRequests - 1)
-    if (this.rawModeRequests === 0 && !this.interactive) {
+    if (this.rawModeRequests === 0) {
       setRawMode.call(this.stdin, false)
     }
   }
 
-  public setBracketedPasteMode = (_value: boolean): void => {}
+  public setBracketedPasteMode = (value: boolean): void => {
+    if (!this.stdout.isTTY) {
+      return
+    }
+
+    if (value) {
+      this.bracketedPasteRequests += 1
+      if (this.bracketedPasteRequests === 1) {
+        this.stdout.write("\u001B[?2004h")
+      }
+      return
+    }
+
+    this.bracketedPasteRequests = Math.max(0, this.bracketedPasteRequests - 1)
+    if (this.bracketedPasteRequests === 0) {
+      this.stdout.write("\u001B[?2004l")
+    }
+  }
 
   private patchConsole(): void {
     this.originalConsole = {
@@ -438,10 +468,7 @@ export class OpenInkSession {
     this.applyCursorPosition()
 
     const metrics: RenderMetrics = {
-      width: this.renderer.width,
-      height: this.renderer.height,
-      columns: this.renderer.width,
-      rows: this.renderer.height,
+      renderTime: Math.max(nowMs() - this.lastRenderStartedAt, 0),
     }
 
     this.onRender?.(metrics)
@@ -723,11 +750,13 @@ export interface CreateCliSessionOptions {
   concurrent?: boolean
   interactive?: boolean
   alternateScreen?: boolean
+  incrementalRendering?: boolean
   useMouse?: boolean
   enableMouseMovement?: boolean
   autoFocus?: boolean
   backgroundColor?: string
   maxFps?: number
+  kittyKeyboard?: KittyKeyboardOptions
 }
 
 export interface CreateBrowserSessionOptions {
@@ -745,7 +774,8 @@ export function createCliSession(options: CreateCliSessionOptions = {}): OpenInk
   const stdout = options.stdout ?? process.stdout
   const stderr = options.stderr ?? process.stderr
   const stdin = options.stdin ?? process.stdin
-  const interactive = options.interactive ?? Boolean(stdout.isTTY)
+  const interactive = options.interactive ?? defaultInteractive(stdout)
+  const kittyKeyboard = normalizeKittyKeyboardOptions(options.kittyKeyboard)
   const renderer = createSyncCliRenderer(
     {
       stdout,
@@ -759,12 +789,15 @@ export function createCliSession(options: CreateCliSessionOptions = {}): OpenInk
       targetFps: options.maxFps,
       maxFps: options.maxFps,
       useConsole: false,
+      useKittyKeyboard: kittyKeyboard,
       testing: !interactive,
     },
     interactive,
   )
 
-  engine.attach(renderer)
+  if (interactive) {
+    engine.attach(renderer)
+  }
 
   return new OpenInkSession({
     renderer,
@@ -775,7 +808,7 @@ export function createCliSession(options: CreateCliSessionOptions = {}): OpenInk
     debug: options.debug ?? false,
     patchConsole: options.patchConsole ?? true,
     exitOnCtrlC: options.exitOnCtrlC ?? true,
-    isScreenReaderEnabled: options.isScreenReaderEnabled ?? false,
+    isScreenReaderEnabled: options.isScreenReaderEnabled ?? defaultScreenReaderEnabled(),
     concurrent: options.concurrent ?? false,
     manualFrames: !interactive,
     onRender: options.onRender,
@@ -809,7 +842,7 @@ export function createBrowserSession(options: CreateBrowserSessionOptions): Open
     debug: false,
     patchConsole: false,
     exitOnCtrlC: true,
-    isScreenReaderEnabled: options.isScreenReaderEnabled ?? false,
+    isScreenReaderEnabled: options.isScreenReaderEnabled ?? defaultScreenReaderEnabled(),
     concurrent: options.concurrent ?? false,
     manualFrames: false,
     onRender: options.onRender,
@@ -840,7 +873,7 @@ export function createHeadlessSession(columns: number = 80): OpenInkSession {
     debug: false,
     patchConsole: false,
     exitOnCtrlC: false,
-    isScreenReaderEnabled: false,
+    isScreenReaderEnabled: defaultScreenReaderEnabled(),
     concurrent: false,
     manualFrames: true,
   })

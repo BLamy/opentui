@@ -65,9 +65,11 @@ export interface LayoutOptions extends BaseRenderableOptions {
   flexDirection?: FlexDirectionString
   flexWrap?: WrapString
   alignItems?: AlignString
+  alignContent?: AlignString
   justifyContent?: JustifyString
   alignSelf?: AlignString
   flexBasis?: number | "auto" | undefined
+  aspectRatio?: number
   position?: PositionTypeString
   overflow?: OverflowString
   top?: number | "auto" | `${number}%`
@@ -681,8 +683,12 @@ export abstract class Renderable extends BaseRenderable {
     node.setFlexDirection(parseFlexDirection(options.flexDirection))
     node.setFlexWrap(parseWrap(options.flexWrap))
     node.setAlignItems(parseAlignItems(options.alignItems))
+    node.setAlignContent(parseAlign(options.alignContent))
     node.setJustifyContent(parseJustify(options.justifyContent))
     node.setAlignSelf(parseAlign(options.alignSelf))
+    if (typeof options.aspectRatio === "number" && Number.isFinite(options.aspectRatio)) {
+      node.setAspectRatio(options.aspectRatio)
+    }
 
     if (isDimensionType(options.width)) {
       this._width = options.width
@@ -693,7 +699,7 @@ export abstract class Renderable extends BaseRenderable {
       this.yogaNode.setHeight(options.height)
     }
 
-    this._positionType = options.position === "absolute" ? "absolute" : "relative"
+    this._positionType = options.position ?? "relative"
     if (this._positionType !== "relative") {
       node.setPositionType(parsePositionType(this._positionType))
     }
@@ -870,6 +876,11 @@ export abstract class Renderable extends BaseRenderable {
     this.requestRender()
   }
 
+  public set alignContent(alignContent: AlignString | null | undefined) {
+    this.yogaNode.setAlignContent(parseAlign(alignContent))
+    this.requestRender()
+  }
+
   public set justifyContent(justifyContent: JustifyString | null | undefined) {
     this.yogaNode.setJustifyContent(parseJustify(justifyContent))
     this.requestRender()
@@ -883,6 +894,13 @@ export abstract class Renderable extends BaseRenderable {
   public set flexBasis(basis: number | "auto" | null | undefined) {
     if (isFlexBasisType(basis)) {
       this.yogaNode.setFlexBasis(basis)
+      this.requestRender()
+    }
+  }
+
+  public set aspectRatio(aspectRatio: number | null | undefined) {
+    if (typeof aspectRatio === "number" && Number.isFinite(aspectRatio)) {
+      this.yogaNode.setAspectRatio(aspectRatio)
       this.requestRender()
     }
   }

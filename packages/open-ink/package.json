@@ -11,7 +11,7 @@
   "module": "src/index.ts",
   "main": "src/index.ts",
   "type": "module",
-  "private": true,
+  "private": false,
   "exports": {
     ".": {
       "import": "./src/index.ts",

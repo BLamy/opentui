@@ -49,12 +49,19 @@ function mapKey(event: KeyEvent): Key {
     tab: event.name === "tab",
     backspace: event.name === "backspace",
     delete: event.name === "delete",
-    meta: event.meta || event.option || event.name === "escape",
+    meta: event.meta || event.option,
     super: event.super ?? false,
     hyper: event.hyper ?? false,
     capsLock: event.capsLock ?? false,
     numLock: event.numLock ?? false,
-    eventType: event.eventType === "release" ? "release" : event.repeated ? "repeat" : "press",
+    eventType:
+      event.eventType === "release"
+        ? "release"
+        : event.repeated
+          ? "repeat"
+          : event.eventType != null
+            ? "press"
+            : undefined,
   }
 }
 

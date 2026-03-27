@@ -5,15 +5,13 @@ export type RenderToStringOptions = {
   columns?: number
 }
 
-let headlessSession: ReturnType<typeof createHeadlessSession> | null = null
+const retainedHeadlessSessions: ReturnType<typeof createHeadlessSession>[] = []
 
 export default function renderToString(node: ReactNode, options?: RenderToStringOptions): string {
-  if (!headlessSession) {
-    headlessSession = createHeadlessSession(options?.columns ?? 80)
-  }
+  const columns = options?.columns ?? 80
+  const headlessSession = createHeadlessSession(columns)
+  retainedHeadlessSessions.push(headlessSession)
 
-  headlessSession.clear()
   headlessSession.render(node)
-  const output = getHeadlessOutput(headlessSession)
-  return output
+  return getHeadlessOutput(headlessSession)
 }
