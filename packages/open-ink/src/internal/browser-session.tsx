@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { BrowserRenderEvents, BrowserRenderer } from "@opentui/core/browser"
 import type { BrowserRendererConfig, BrowserTerminalHost, KeyEvent, PasteEvent } from "@opentui/core/browser"
 import { runtime } from "./runtime.js"
+import { defaultScreenReaderEnabled } from "./options.js"
 import { SessionContext } from "../context/session.js"
 import { AppContext } from "../context/app.js"
 import { StdinContext, type StdinContextValue } from "../context/stdin.js"
@@ -25,10 +26,7 @@ type FocusEntry = {
 }
 
 export interface RenderMetrics {
-  width: number
-  height: number
-  columns: number
-  rows: number
+  renderTime: number
 }
 
 export interface CreateBrowserSessionOptions {
@@ -68,6 +66,10 @@ function createReadStreamLike(): NodeJS.ReadStream {
   stream.isTTY = true
   stream.setRawMode = () => stream
   return stream
+}
+
+function nowMs(): number {
+  return globalThis.performance?.now() ?? Date.now()
 }
 
 function getFocusableIds(entries: FocusEntry[]): string[] {
@@ -116,6 +118,7 @@ export class OpenInkSession {
   private currentNode: React.ReactNode = null
   private appendStaticEntry?: (node: React.ReactNode) => void
   private clearStaticEntries?: () => void
+  private lastRenderStartedAt = 0
   private destroyed = false
   private unmounting = false
   private rawModeRequests = 0
@@ -173,6 +176,7 @@ export class OpenInkSession {
     }
 
     this.currentNode = node
+    this.lastRenderStartedAt = nowMs()
     this.lastRenderFlush = this.createFlushPromise()
     const wrappedNode = React.createElement(RootShell, {
       key: `root-${this.renderCount++}`,
@@ -257,7 +261,7 @@ export class OpenInkSession {
   public setRawMode = (value: boolean): void => {
     const setRawMode = (this.stdin as NodeJS.ReadStream & { setRawMode?: (value: boolean) => void }).setRawMode
     if (!setRawMode) {
-      return
+      throw new Error("stdin does not support raw mode")
     }
 
     if (value) {
@@ -308,10 +312,7 @@ export class OpenInkSession {
     this.applyCursorPosition()
 
     const metrics: RenderMetrics = {
-      width: this.renderer.width,
-      height: this.renderer.height,
-      columns: this.renderer.width,
-      rows: this.renderer.height,
+      renderTime: Math.max(nowMs() - this.lastRenderStartedAt, 0),
     }
 
     this.onRender?.(metrics)
@@ -602,7 +603,7 @@ export function createBrowserSession(options: CreateBrowserSessionOptions): Open
     stdin,
     stdout,
     stderr,
-    isScreenReaderEnabled: options.isScreenReaderEnabled ?? false,
+    isScreenReaderEnabled: options.isScreenReaderEnabled ?? defaultScreenReaderEnabled(),
     concurrent: options.concurrent ?? false,
     onRender: options.onRender,
   })

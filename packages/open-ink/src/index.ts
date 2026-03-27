@@ -1,3 +1,5 @@
+import "./internal/bootstrap.js"
+
 export type { RenderOptions, Instance } from "./render.js"
 export { default as render } from "./render.js"
 export type { RenderToStringOptions } from "./render-to-string.js"
