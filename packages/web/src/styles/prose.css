@@ -256,6 +256,92 @@
   }
 }
 
+/* Runnable examples: run and copy share the corner. Output opens below the
+ * code; the terminal uses the page colors. */
+
+.prose .code-controls {
+  position: absolute;
+  inset-block-start: 0.375rem;
+  inset-inline-end: 0.375rem;
+  display: flex;
+}
+
+.prose .code-controls .copy-code {
+  position: static;
+}
+
+.prose .run-code {
+  padding: 0.125rem 0.375rem;
+  border: 0;
+  background: var(--page-background);
+  color: inherit;
+  font: inherit;
+  font-size: var(--text-caption);
+  cursor: pointer;
+  opacity: 0;
+}
+
+.prose .code-block:hover .run-code,
+.prose .run-code:focus-visible,
+.prose .run-code[aria-expanded="true"] {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .prose .run-code {
+    opacity: 1;
+  }
+}
+
+.prose .code-example__editor {
+  border: 1px solid GrayText;
+  font-size: var(--text-small);
+}
+
+.prose .code-example__output {
+  margin-block-start: 0.75rem;
+}
+
+.prose .code-example__terminal {
+  position: relative;
+  height: 20rem;
+  border: 1px solid GrayText;
+}
+
+.example-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* A new run loads behind the current output and replaces it when ready. */
+.example-frame[data-state="loading"] {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+}
+
+.prose .code-example__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1ch;
+  margin: 0.25rem 0 0;
+  color: var(--muted-color);
+  font-size: var(--text-caption);
+}
+
+.example-textarea {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 0;
+  background: var(--page-background);
+  color: inherit;
+  font: inherit;
+  resize: vertical;
+}
+
 /* Shiki dual themes: swap token colors with the page theme and keep the
  * page background so code sits on the same surface as the text. */
 

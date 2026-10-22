@@ -28,6 +28,7 @@
     "validate:docs:examples": "bun scripts/verify-doc-examples.ts",
     "validate:docs:native": "bun scripts/verify-native-doc-examples.ts",
     "validate:docs": "bun run validate:docs:metadata && bun run validate:docs:links && bun run validate:docs:skill && bun run validate:docs:releases && bun run test:docs",
+    "test:examples": "bun test src/scripts",
     "test:docs": "bun test src/lib/docs-index.test.ts src/lib/docs-search.test.ts scripts/doc-validator.test.ts scripts/doc-visuals.test.ts scripts/terminal-illustration.test.ts && bun run test:site",
     "test:site": "bun test src/lib/docs-channel.test.ts src/lib/release-notes.test.ts src/lib/api-index-symbols.test.ts src/lib/api-reference.test.ts src/lib/api-history.test.ts scripts/api scripts/site",
     "validate:packages": "bun scripts/validate-packages.ts src/content/packages",
@@ -37,7 +38,10 @@
     "@astrojs/mdx": "^7.0.5",
     "@opentui/core": "workspace:*",
     "@opentui/keymap": "workspace:*",
-    "astro": "^7.1.6"
+    "astro": "^7.1.6",
+    "ghostty-web": "^0.3.0",
+    "monaco-editor": "^0.55.1",
+    "sucrase": "^3.35.1"
   },
   "devDependencies": {
     "@opentui/qrcode": "workspace:*",

@@ -11,6 +11,12 @@ const source = String(props["data-code"] ?? "")
 const visualId = props["data-terminal-visual"]
 const visual = typeof visualId === "string" ? visuals[visualId as keyof typeof visuals] : undefined
 const isDiagram = /^[┌╭┏╔]/.test(source.trimStart())
+// An `example` fence is a complete program that runs in the page (scripts/docs-examples.ts).
+const { "data-example": example, ...codeProps } = props
+const isExample = example !== undefined && example !== false
+const outputId = isExample
+  ? `example-${[...source].reduce((hash, char) => (Math.imul(hash, 31) + char.charCodeAt(0)) >>> 0, 7).toString(36)}`
+  : undefined
 
 if (visualId && !visual) throw new Error(`Unknown terminal visual "${visualId}"`)
 
@@ -63,6 +69,22 @@ function color(value: { intent: string; value: string; slot?: number }, backgrou
     >
       <pre {...props} aria-hidden="true"><slot /></pre>
     </figure>
+  ) : isExample ? (
+    <div class="code-block code-example" data-example data-language={props["data-language"]}>
+      <pre {...codeProps}><slot /></pre>
+      <div class="code-example__editor" data-example-editor hidden></div>
+      <div class="code-controls">
+        <button class="run-code" type="button" aria-expanded="false" aria-controls={outputId}>run</button>
+        <button class="copy-code" type="button">copy</button>
+      </div>
+      <div class="code-example__output" id={outputId} data-example-output hidden>
+        <div class="code-example__terminal" data-example-terminal></div>
+        <p class="code-example__meta">
+          <span role="status" data-example-status></span>
+          <a data-example-workbench href="/workbench">workbench</a>
+        </p>
+      </div>
+    </div>
   ) : (
     <div class="code-block">
       <pre {...props}><slot /></pre>
@@ -70,6 +92,8 @@ function color(value: { intent: string; value: string; slot?: number }, backgrou
     </div>
   )
 }
+
+<script src="../scripts/docs-examples.ts"></script>
 
 <script>
   document.addEventListener("click", (event) => {

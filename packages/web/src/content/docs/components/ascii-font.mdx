@@ -21,7 +21,7 @@ description: Display text with a bundled ASCII art font
 
 ### Renderable API
 
-```typescript
+```typescript example
 import { ASCIIFontRenderable, RGBA, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -130,7 +130,7 @@ const title = new ASCIIFontRenderable(renderer, {
 
 ## Example: welcome screen
 
-```typescript
+```typescript example
 import { ASCIIFontRenderable, BoxRenderable, TextRenderable, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -188,7 +188,7 @@ setInterval(() => {
 
 Create a shadow by overlaying two ASCII fonts:
 
-```typescript
+```typescript example
 import { ASCIIFontRenderable, BoxRenderable, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()

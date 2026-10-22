@@ -109,7 +109,7 @@ Right-button and middle-button drags follow hit testing without this capture. A 
 `renderer.setMousePointer()` changes the mouse pointer style in the terminal pane. The style applies to the renderer,
 not to an individual renderable. Use `onMouseOver` to set the style. Use `onMouseOut` to restore `"default"`.
 
-```typescript
+```typescript example
 import { BoxRenderable, createCliRenderer, type MousePointerStyle } from "@opentui/core"
 
 const renderer = await createCliRenderer()

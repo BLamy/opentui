@@ -1,12 +1,16 @@
 import { defineConfig } from "astro/config"
 import mdx from "@astrojs/mdx"
 import { buildChannels, docsRedirects } from "./src/lib/docs-channel.ts"
+import { opentuiBrowser } from "./src/lib/opentui-browser.ts"
 
 const copyButtonTransformer = {
   name: "copy-button",
   pre(node) {
     node.properties["data-code"] = this.source
     if (this.options?.lang) node.properties["data-language"] = this.options.lang
+
+    // `example` marks a self-contained program that docs pages can run in the browser.
+    if (/(?:^|\s)example(?=\s|$)/.test(this.options.meta?.__raw ?? "")) node.properties["data-example"] = true
 
     if (this.options?.lang === "text") {
       const metadata = this.options.meta?.__raw ?? ""
@@ -122,7 +126,7 @@ const codeCobalt = {
 
 // scripts/build-site.ts writes the sitemap after it merges the channels.
 export default defineConfig({
-  integrations: [mdx()],
+  integrations: [mdx(), opentuiBrowser()],
   site: "https://opentui.com",
   build: {
     // The release channel's build keeps its assets under /docs so its tree can be merged into the main build.

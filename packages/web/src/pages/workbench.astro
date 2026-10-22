@@ -1,0 +1,77 @@
+---
+import SitePage from "../layouts/SitePage.astro"
+---
+
+<SitePage
+  title="Workbench | OpenTUI"
+  description="Edit an OpenTUI program and run it in the browser."
+  wide
+  robots="noindex"
+>
+  <h1>Workbench</h1>
+  <p>Edit the program. It runs in the page with the WebAssembly build of OpenTUI as you type.</p>
+  <div class="workbench">
+    <div class="workbench__editor" data-workbench-editor></div>
+    <div class="workbench__output" data-workbench-output></div>
+  </div>
+  <p class="workbench__meta">
+    <span role="status" data-workbench-status></span>
+    <button type="button" data-workbench-reset>reset</button>
+  </p>
+  <script src="../scripts/workbench.ts"></script>
+</SitePage>
+
+<style>
+  p {
+    max-width: var(--content-width);
+  }
+
+  .workbench {
+    display: grid;
+    gap: 1.5rem;
+    margin-block-start: 1.5rem;
+  }
+
+  .workbench__editor,
+  .workbench__output {
+    position: relative;
+    min-width: 0;
+    height: 32rem;
+    border: 1px solid GrayText;
+    font-size: var(--text-small);
+  }
+
+  .workbench__editor {
+    overflow: auto;
+  }
+
+  .workbench__editor :global(.example-textarea) {
+    height: 100%;
+    resize: none;
+  }
+
+  .workbench__meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 1ch;
+    max-width: none;
+    margin-block: 0.25rem 0;
+    color: var(--muted-color);
+    font-size: var(--text-caption);
+  }
+
+  .workbench__meta button {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--page-color);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  @media (min-width: 64rem) {
+    .workbench {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+</style>

@@ -59,7 +59,7 @@ function extractCodeBlocks(content: string, file: string): CodeBlock[] {
     const trimmed = line.trim()
 
     if (!currentBlock) {
-      const openMatch = trimmed.match(/^(`{3,})(typescript|ts|javascript|js|tsx|jsx)\s*$/)
+      const openMatch = trimmed.match(/^(`{3,})(typescript|ts|javascript|js|tsx|jsx)(?:\s+example)?\s*$/)
       if (!openMatch) {
         continue
       }

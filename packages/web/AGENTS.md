@@ -113,6 +113,10 @@ Documentation can be dense, but it must use the same restrained design language.
 - Use text only for the code copy control. Show it on hover or focus, and keep it visible on touch devices.
 - Prefer monospace box-drawing diagrams to images. Set them in a `text` fence that starts with a box-drawing corner.
 - Those fences use the article typeface at body size. They have no code frame and no copy control.
+- Tag a complete `@opentui/core` program `typescript example` to give it a `run` control. Running it shows its output
+  below the code and makes the code editable. `bun run test:examples` runs every tagged example. The site serves
+  `opentui.wasm` from `packages/native`; build it with `bun run build:wasm` in `packages/core`.
+- `/workbench` edits and runs one program. Its URL fragment holds the program.
 
 ## Versions And Releases
 

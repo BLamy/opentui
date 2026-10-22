@@ -15,7 +15,7 @@ String length and terminal width are different values. Keep that distinction whe
 
 Use `t` as a template tag. Style helpers return chunks that you can insert into the template.
 
-```typescript
+```typescript example
 import { RGBA, TextRenderable, bold, italic, t, underline, createCliRenderer } from "@opentui/core"
 
 const renderer = await createCliRenderer()
@@ -176,7 +176,7 @@ See [Interaction, focus, and selection](/docs/core-concepts/interaction) for glo
 
 `link(url)(text)` adds link metadata to a `TextChunk`. OpenTUI emits an OSC 8 hyperlink only when `capabilities.hyperlinks` is true.
 
-```typescript
+```typescript example
 import { TextRenderable, createCliRenderer, link, t } from "@opentui/core"
 
 const renderer = await createCliRenderer()

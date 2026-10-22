@@ -1,0 +1,58 @@
+---
+// The frame that runs one example. Docs pages and the workbench post the program
+// to it; a link can carry the program in its fragment (see example-protocol.ts).
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <meta name="color-scheme" content="light dark" />
+    <title>OpenTUI example</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <div class="terminal" data-example-terminal></div>
+    <script>
+      import "../../scripts/example-preview.ts"
+    </script>
+  </body>
+</html>
+
+<style is:global>
+  @font-face {
+    font-family: "OpenTUI Mono";
+    src: url("/fonts/OpenTUIMono-Regular.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+  }
+
+  @font-face {
+    font-family: "OpenTUI Mono";
+    src: url("/fonts/OpenTUIMono-Bold.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+  }
+
+  html,
+  body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: Canvas;
+  }
+
+  .terminal {
+    height: 100%;
+  }
+
+  .terminal canvas {
+    display: block;
+  }
+
+  .terminal textarea:focus-visible {
+    outline: none;
+  }
+</style>
