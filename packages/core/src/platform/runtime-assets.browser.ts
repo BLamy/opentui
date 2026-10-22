@@ -3,6 +3,8 @@
 export interface BrowserRuntimeAssets {
   treeSitterWasm?: string
   treeSitterWorker?: string
+  // Base URL of the default parser files (assets/<language>/...).
+  treeSitterAssetBase?: string
 }
 
 const assets: BrowserRuntimeAssets = {}
@@ -11,8 +13,16 @@ export function setBrowserRuntimeAssets(overrides: BrowserRuntimeAssets): void {
   Object.assign(assets, overrides)
 }
 
-export function resolveDefaultParserAsset(_relativePath: string, fallbackPath: URL): Promise<string> {
-  return Promise.resolve(fallbackPath.href)
+export function setDefaultBrowserRuntimeAssets(defaults: BrowserRuntimeAssets): void {
+  assets.treeSitterWasm ??= defaults.treeSitterWasm
+  assets.treeSitterWorker ??= defaults.treeSitterWorker
+  assets.treeSitterAssetBase ??= defaults.treeSitterAssetBase
+}
+
+export function resolveDefaultParserAsset(relativePath: string, fallbackPath: URL): Promise<string> {
+  return Promise.resolve(
+    assets.treeSitterAssetBase ? new URL(relativePath, assets.treeSitterAssetBase).href : fallbackPath.href,
+  )
 }
 
 export function resolveDefaultTreeSitterWorkerPath(fallbackPath: URL): string {

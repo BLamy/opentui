@@ -240,7 +240,8 @@ class ParserWorker {
     const normalizedPath = result.filePath.replaceAll("\\", "/")
 
     try {
-      const language = await Language.load(normalizedPath)
+      // Load from the bytes when we have them: browser workers have no filesystem to load the path from.
+      const language = await Language.load(result.content ?? normalizedPath)
       return language
     } catch (error) {
       console.error(`Error loading language from ${normalizedPath}:`, error)

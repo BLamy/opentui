@@ -152,7 +152,8 @@ function getBuiltinModule<T>(id: string): T | undefined {
 
 function loadWorkerConstructor(): PlatformWorkerConstructor {
   if (typeof globalWithWorker.Worker === "function") {
-    return globalWithWorker.Worker
+    // Browsers run worker scripts as classic scripts unless asked for a module worker.
+    return typeof document === "undefined" ? globalWithWorker.Worker : createModuleWorkerConstructor(globalWithWorker.Worker)
   }
 
   if (nodeWorkerThreads) {
@@ -160,6 +161,14 @@ function loadWorkerConstructor(): PlatformWorkerConstructor {
   }
 
   return UnsupportedWorker
+}
+
+function createModuleWorkerConstructor(BrowserWorker: PlatformWorkerConstructor): PlatformWorkerConstructor {
+  return class ModuleWorker extends BrowserWorker {
+    constructor(specifier: string | URL, options: PlatformWorkerOptions = {}) {
+      super(specifier, { ...options, type: "module" } as PlatformWorkerOptions)
+    }
+  } as PlatformWorkerConstructor
 }
 
 function createNodeWorkerConstructor(node: NodeWorkerThreadsModule): PlatformWorkerConstructor {

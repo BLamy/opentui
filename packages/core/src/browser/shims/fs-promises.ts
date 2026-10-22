@@ -4,8 +4,9 @@ function normalizePath(value: string): string {
   return value.replaceAll("\\", "/")
 }
 
+// Absolute paths are virtual files; only URLs come from the network.
 function isFetchablePath(value: string): boolean {
-  return value.startsWith("/") || value.startsWith("http://") || value.startsWith("https://")
+  return value.startsWith("http://") || value.startsWith("https://")
 }
 
 function toBytes(value: string | ArrayBuffer | ArrayBufferView): Uint8Array {

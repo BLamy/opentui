@@ -405,33 +405,51 @@ if (buildLib) {
   // Node built-ins to browser shims.
   const { browserShimAliases } = await import("../src/browser/shims/index.ts")
   const shimAliases = browserShimAliases()
-  const browserBuild = await Bun.build({
-    entrypoints: [join(rootDir, "src/browser.ts")],
-    outdir: distDir,
-    target: "browser",
-    format: "esm",
-    splitting: true,
-    sourcemap: "external",
-    conditions: ["browser"],
-    naming: { entry: "[name].[ext]", chunk: "browser-chunks/[name]-[hash].[ext]" },
-    external: [...externalDeps, "*.wasm", "*.scm"],
-    plugins: [
-      {
-        name: "opentui-browser-shims",
-        setup(build) {
-          build.onResolve({ filter: /^(node:)?[a-z_/]+$/ }, (args) => {
-            const alias = shimAliases.find((entry) => entry.find.test(args.path))
-            return alias ? { path: alias.replacement } : undefined
-          })
-        },
-      },
-    ],
-  })
-  if (!browserBuild.success) {
-    for (const log of browserBuild.logs) console.error(log)
+  const browserShimPlugin: Bun.BunPlugin = {
+    name: "opentui-browser-shims",
+    setup(build) {
+      build.onResolve({ filter: /^(node:)?[a-z_/]+$/ }, (args) => {
+        const alias = shimAliases.find((entry) => entry.find.test(args.path))
+        return alias ? { path: alias.replacement } : undefined
+      })
+    },
+  }
+  const browserBuilds = [
+    await Bun.build({
+      entrypoints: [join(rootDir, "src/browser.ts")],
+      outdir: distDir,
+      target: "browser",
+      format: "esm",
+      splitting: true,
+      sourcemap: "external",
+      conditions: ["browser"],
+      naming: { entry: "[name].[ext]", chunk: "browser-chunks/[name]-[hash].[ext]" },
+      external: [...externalDeps, "*.wasm", "*.scm"],
+      plugins: [browserShimPlugin],
+    }),
+    // Workers cannot resolve bare specifiers, so the tree-sitter worker bundles its dependencies.
+    await Bun.build({
+      entrypoints: [join(rootDir, "src/browser/parser.worker.ts")],
+      outdir: distDir,
+      target: "browser",
+      format: "esm",
+      sourcemap: "external",
+      conditions: ["browser"],
+      naming: { entry: "parser.worker.browser.[ext]" },
+      external: ["*.wasm"],
+      plugins: [browserShimPlugin],
+    }),
+  ]
+  for (const build of browserBuilds) {
+    if (build.success) continue
+    for (const log of build.logs) console.error(log)
     console.error("Error: Browser bundle build failed")
     process.exit(1)
   }
+  copyFileSync(
+    fileURLToPath(import.meta.resolve("web-tree-sitter/tree-sitter.wasm")),
+    join(distDir, "tree-sitter.wasm"),
+  )
   if (existsSync(wasmArtifactPath)) {
     copyFileSync(wasmArtifactPath, join(distDir, "opentui.wasm"))
     console.log("  Copied browser wasm to dist/opentui.wasm")

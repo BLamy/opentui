@@ -3,7 +3,11 @@
 // loads everything that touches the bindings after the wasm is installed.
 import { installNodeGlobals } from "./browser/shims/process.js"
 import { installOpenTUIWasm, type OpenTUIWasmOptions } from "./browser/wasm.js"
-import { setBrowserRuntimeAssets, type BrowserRuntimeAssets } from "./platform/runtime-assets.browser.js"
+import {
+  setBrowserRuntimeAssets,
+  setDefaultBrowserRuntimeAssets,
+  type BrowserRuntimeAssets,
+} from "./platform/runtime-assets.browser.js"
 import type { BrowserRendererConfig, BrowserTerminalHost } from "./browser/renderer.js"
 import type { CliRenderer } from "./renderer.js"
 import type { RenderLib } from "./zig.js"
@@ -20,13 +24,24 @@ export interface BrowserLoadOptions {
   assets?: BrowserRuntimeAssets
 }
 
+// The published package ships these files next to this module. Hosts that bundle
+// core from source pass their own URLs.
 function defaultWasmSource(): URL {
   return new URL("./opentui.wasm", import.meta.url)
+}
+
+function defaultAssets(): BrowserRuntimeAssets {
+  return {
+    treeSitterWasm: new URL("./tree-sitter.wasm", import.meta.url).href,
+    treeSitterWorker: new URL("./parser.worker.browser.js", import.meta.url).href,
+    treeSitterAssetBase: new URL("./", import.meta.url).href,
+  }
 }
 
 export async function loadBrowserRenderLib(options: BrowserLoadOptions = {}): Promise<RenderLib> {
   installNodeGlobals()
   if (options.assets) setBrowserRuntimeAssets(options.assets)
+  setDefaultBrowserRuntimeAssets(defaultAssets())
   await installOpenTUIWasm({ source: options.wasm ?? defaultWasmSource(), onWrite: options.onWrite })
   const { resolveRenderLib } = await import("./zig.js")
   return resolveRenderLib()
