@@ -136,9 +136,8 @@ fn zeroHandle(value: c.ot_handle) bool {
     return value.context_id == 0 and value.slot == 0 and value.generation == 0;
 }
 
-
 /// Unpadded byte count of a command record, after checking its fixed fields.
-// u64 because commandSize adds up to four u32 lengths, which can overflow a 32-bit usize.
+/// The sum of up to four u32 lengths can overflow a 32-bit usize, so it is a u64.
 fn commandSize(operation: u32, body: []const u8) !u64 {
     switch (operation) {
         c.OT_SCENE_RECORD_DRAW => {

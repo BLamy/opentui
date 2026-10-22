@@ -803,7 +803,12 @@ type NativeArrayConstructor<T> = {
 // A typed view that writes through to native memory. The wasm backend cannot
 // alias linear memory with toArrayBuffer(), and its views detach when memory
 // grows, so callers must not keep them across native calls.
-export function nativeArray<T>(type: NativeArrayConstructor<T>, pointer: Pointer, byteLength: number, byteOffset = 0): T {
+export function nativeArray<T>(
+  type: NativeArrayConstructor<T>,
+  pointer: Pointer,
+  byteLength: number,
+  byteOffset = 0,
+): T {
   if (usesWasmFFI) {
     const memory = (backend as unknown as WasmFfiBackend).memory
     return new type(memory.buffer, Number(pointer) + byteOffset, byteLength / type.BYTES_PER_ELEMENT)

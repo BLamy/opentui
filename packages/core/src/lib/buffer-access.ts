@@ -39,29 +39,28 @@ export function withLazyBufferAccess<T>(
     const guard = () => {
       if (!active) throw new Error("Buffer access scope has ended")
     }
+    // wasm views detach when linear memory grows; recreate them rather than return an empty view.
+    const live = <T extends ArrayBufferView>(view: T | undefined) => (view && view.byteLength > 0 ? view : undefined)
     cells = {
       width: value.width,
       height: value.height,
       generation: value.generation,
       get char() {
         guard()
-        if (!char || char.byteLength === 0) char = nativeArray(Uint32Array, value.char, value.width * value.height * 4)
-        return char
+        return (char = live(char) ?? nativeArray(Uint32Array, value.char, value.width * value.height * 4))
       },
       get fg() {
         guard()
-        if (!fg || fg.byteLength === 0) fg = nativeArray(Uint16Array, value.fg, value.width * value.height * 8)
-        return fg
+        return (fg = live(fg) ?? nativeArray(Uint16Array, value.fg, value.width * value.height * 8))
       },
       get bg() {
         guard()
-        if (!bg || bg.byteLength === 0) bg = nativeArray(Uint16Array, value.bg, value.width * value.height * 8)
-        return bg
+        return (bg = live(bg) ?? nativeArray(Uint16Array, value.bg, value.width * value.height * 8))
       },
       get attributes() {
         guard()
-        if (!attributes || attributes.byteLength === 0) attributes = nativeArray(Uint32Array, value.attributes, value.width * value.height * 4)
-        return attributes
+        return (attributes =
+          live(attributes) ?? nativeArray(Uint32Array, value.attributes, value.width * value.height * 4))
       },
     }
     return cells

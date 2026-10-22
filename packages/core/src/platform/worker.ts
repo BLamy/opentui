@@ -153,7 +153,9 @@ function getBuiltinModule<T>(id: string): T | undefined {
 function loadWorkerConstructor(): PlatformWorkerConstructor {
   if (typeof globalWithWorker.Worker === "function") {
     // Browsers run worker scripts as classic scripts unless asked for a module worker.
-    return typeof document === "undefined" ? globalWithWorker.Worker : createModuleWorkerConstructor(globalWithWorker.Worker)
+    return typeof document === "undefined"
+      ? globalWithWorker.Worker
+      : createModuleWorkerConstructor(globalWithWorker.Worker)
   }
 
   if (nodeWorkerThreads) {
