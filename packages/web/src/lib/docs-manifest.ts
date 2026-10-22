@@ -193,6 +193,12 @@ export const DOC_MANIFEST = {
     related: ["bindings/react", "components/text", "keymap/solid", "plugins/solid"],
   }),
 
+  "bindings/open-ink": page("frameworks", 3, "open-ink", "framework-guide", {
+    packages: ["open-ink"],
+    availability: { core: "Use the Core API", react: "Use the React bindings", solid: "Use the Solid bindings" },
+    searchSymbols: ["render", "Box", "Text", "useInput", "useFocus", "Static", "Transform"],
+    related: ["bindings/react", "components/text", "components/box"],
+  }),
   "core-concepts/renderer": page("core", 1, "Renderer", "concept", {
     searchSymbols: ["CliRenderer", "createCliRenderer"],
     related: [

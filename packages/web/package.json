@@ -41,6 +41,8 @@
     "astro": "^7.1.6",
     "ghostty-web": "^0.3.0",
     "monaco-editor": "^0.55.1",
+    "open-ink": "workspace:*",
+    "react": ">=19.2.0",
     "sucrase": "^3.35.1"
   },
   "devDependencies": {

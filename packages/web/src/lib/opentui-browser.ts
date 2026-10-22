@@ -17,6 +17,8 @@ const CORE_BROWSER_ASSETS = ["tree-sitter.wasm", "parser.worker.browser.js", "as
 type VitePlugin = NonNullable<NonNullable<AstroUserConfig["vite"]>["plugins"]>[number]
 
 const CORE_SOURCE = resolve(fileURLToPath(new URL("../../../core/src", import.meta.url)))
+// Packages that run on core in the page and import Node built-ins the same way.
+const SHIMMED_SOURCES = [CORE_SOURCE, resolve(fileURLToPath(new URL("../../../open-ink/src", import.meta.url)))]
 
 function wasmSource(): string {
   return resolve(
@@ -38,7 +40,7 @@ function missingWasmWarning(path: string): string {
   return `${path} is missing, so live examples will not run. Build it with \`bun run build:wasm\` in packages/core.`
 }
 
-// Core imports Node built-ins. Client bundles resolve them to core's browser shims;
+// Core and open-ink import Node built-ins. Client bundles resolve them to core's browser shims;
 // the server build keeps the real modules.
 function browserShims(): VitePlugin {
   const aliases = browserShimAliases()
@@ -47,7 +49,7 @@ function browserShims(): VitePlugin {
     enforce: "pre",
     resolveId(this: { environment?: { name: string } }, source: string, importer: string | undefined) {
       if (this.environment?.name !== "client" || !importer) return null
-      if (!resolve(importer).startsWith(CORE_SOURCE)) return null
+      if (!SHIMMED_SOURCES.some((source) => resolve(importer).startsWith(source))) return null
       return aliases.find((alias) => alias.find.test(source))?.replacement ?? null
     },
   }

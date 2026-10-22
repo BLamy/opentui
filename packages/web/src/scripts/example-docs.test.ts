@@ -3,6 +3,9 @@ import { readdirSync, readFileSync } from "node:fs"
 import { join, relative } from "node:path"
 import * as core from "@opentui/core"
 import { createTestRenderer, type TestRendererSetup } from "@opentui/core/testing"
+import * as openInk from "open-ink/browser"
+import * as react from "react"
+import * as jsxRuntime from "react/jsx-runtime"
 import { compileExample } from "./example-compiler"
 
 // Every docs fence tagged `example` runs in the browser. Run each one against a
@@ -46,19 +49,35 @@ test("docs have runnable examples", () => {
 for (const example of examples) {
   test(`renders ${example.name}`, async () => {
     const compiled = compileExample(example.code, example.language)
-    expect(compiled.runtimeKind).toBe("core")
 
     const createCliRenderer = async (config: core.CliRendererConfig = {}) => {
       const setup = await createTestRenderer({ ...config, width: 80, height: 24 })
       setups.push(setup)
       return setup.renderer
     }
-    const modules: Record<string, unknown> = { "@opentui/core": { ...core, createCliRenderer } }
+    const renders: Promise<unknown>[] = []
+    const modules: Record<string, unknown> =
+      compiled.runtimeKind === "core"
+        ? { "@opentui/core": { ...core, createCliRenderer } }
+        : {
+            "@opentui/core": core,
+            react,
+            "react/jsx-runtime": jsxRuntime,
+            "open-ink": {
+              ...openInk,
+              render: (node: Parameters<typeof openInk.render>[0]) => {
+                const rendered = createCliRenderer().then((renderer) => openInk.render(node, { renderer }))
+                renders.push(rendered)
+                return rendered
+              },
+            },
+          }
     const require = (name: string) => {
       if (name in modules) return modules[name]
       throw new Error(`Examples cannot import ${name} in the browser`)
     }
     await new AsyncFunction("require", "exports", "module", compiled.code)(require, {}, { exports: {} })
+    await Promise.all(renders)
 
     const setup = setups.find((candidate) => !candidate.renderer.isDestroyed)
     expect(setup).toBeDefined()
