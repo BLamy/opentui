@@ -122,6 +122,17 @@ console.log("Generating TypeScript declarations...")
 
 const tsconfigBuildPath = join(rootDir, "tsconfig.build.json")
 
+// The declarations resolve @opentui/react-runtime from its dist.
+const runtimeBuildResult: SpawnSyncReturns<Buffer> = spawnSync("bun", ["run", "build", ...(isCi ? ["--ci"] : [])], {
+  cwd: resolve(rootDir, "../react-runtime"),
+  stdio: "inherit",
+})
+
+if (runtimeBuildResult.status !== 0) {
+  console.error("Error: Failed to build @opentui/react-runtime")
+  process.exit(1)
+}
+
 const tscResult: SpawnSyncReturns<Buffer> = spawnSync("bunx", ["tsc", "-p", tsconfigBuildPath], {
   cwd: rootDir,
   stdio: "inherit",
@@ -212,8 +223,10 @@ const exports = {
 }
 
 const processedDependencies = { ...packageJson.dependencies }
-if (processedDependencies["@opentui/core"] === "workspace:*") {
-  processedDependencies["@opentui/core"] = packageJson.version
+for (const workspaceDependency of ["@opentui/core", "@opentui/react-runtime"]) {
+  if (processedDependencies[workspaceDependency] === "workspace:*") {
+    processedDependencies[workspaceDependency] = packageJson.version
+  }
 }
 
 writeFileSync(

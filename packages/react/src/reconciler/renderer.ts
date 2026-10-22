@@ -3,13 +3,10 @@ import React, { type ReactNode } from "react"
 import type { OpaqueRoot } from "react-reconciler"
 import { AppContext } from "../components/app.js"
 import { ErrorBoundary } from "../components/error-boundary.js"
-import { createContainer, reconciler } from "./reconciler.js"
+import { runtime } from "./host-config.js"
+import { createContainer } from "./reconciler.js"
 
-// flushSync was renamed to flushSyncFromReconciler in react-reconciler 0.32.0
-// the types for react-reconciler are not up to date with the library
-const _r = reconciler as typeof reconciler & { flushSyncFromReconciler?: typeof reconciler.flushSync }
-const flushSync = _r.flushSyncFromReconciler ?? _r.flushSync
-const { createPortal } = reconciler
+const { createPortal, flushSync } = runtime
 
 export type Root = {
   render: (node: ReactNode) => void
@@ -36,8 +33,8 @@ export function createRoot(renderer: CliRenderer): Root {
     if (!current) return
     container = null
     renderer.off(CliRenderEvents.DESTROY, cleanup)
-    reconciler.updateContainerSync(null, current, null, () => {})
-    reconciler.flushSyncWork()
+    runtime.unmountContainer(current)
+    runtime.flushSyncWork()
   }
 
   return {
@@ -54,7 +51,7 @@ export function createRoot(renderer: CliRenderer): Root {
         // Explicit renders retry failed trees without remounting healthy children.
         React.createElement(ErrorBoundary, { resetKey: ++renderVersion, children: node }),
       )
-      reconciler.updateContainer(element, container, null, () => {})
+      runtime.updateContainer(element, container)
     },
 
     unmount: cleanup,

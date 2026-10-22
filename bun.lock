@@ -95,6 +95,35 @@
       "name": "@opentui/native",
       "version": "0.6.7",
     },
+    "packages/open-ink": {
+      "name": "open-ink",
+      "version": "0.6.7",
+      "dependencies": {
+        "@opentui/core": "workspace:*",
+        "@opentui/react-runtime": "workspace:*",
+        "react-reconciler": "^0.33.0",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.1",
+        "@types/node": "^24.0.0",
+        "@types/react": "^19.2.0",
+        "@types/react-reconciler": "^0.33.0",
+        "@types/ws": "^8.18.1",
+        "react": ">=19.2.0",
+        "react-devtools-core": "^7.0.1",
+        "typescript": "^5",
+        "ws": "^8.18.0",
+      },
+      "peerDependencies": {
+        "react": ">=19.2.0",
+        "react-devtools-core": "^7.0.1",
+        "ws": "^8.18.0",
+      },
+      "optionalPeers": [
+        "react-devtools-core",
+        "ws",
+      ],
+    },
     "packages/qrcode": {
       "name": "@opentui/qrcode",
       "version": "0.6.7",
@@ -122,6 +151,7 @@
       "version": "0.6.7",
       "dependencies": {
         "@opentui/core": "workspace:*",
+        "@opentui/react-runtime": "workspace:*",
         "react-reconciler": "^0.33.0",
       },
       "devDependencies": {
@@ -145,6 +175,25 @@
         "react-devtools-core",
         "ws",
       ],
+    },
+    "packages/react-runtime": {
+      "name": "@opentui/react-runtime",
+      "version": "0.6.7",
+      "dependencies": {
+        "@opentui/core": "workspace:*",
+        "react-reconciler": "^0.33.0",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.1",
+        "@types/node": "^24.0.0",
+        "@types/react": "^19.2.0",
+        "@types/react-reconciler": "^0.33.0",
+        "react": ">=19.2.0",
+        "typescript": "^5",
+      },
+      "peerDependencies": {
+        "react": ">=19.2.0",
+      },
     },
     "packages/solid": {
       "name": "@opentui/solid",
@@ -550,6 +599,8 @@
     "@opentui/qrcode": ["@opentui/qrcode@workspace:packages/qrcode"],
 
     "@opentui/react": ["@opentui/react@workspace:packages/react"],
+
+    "@opentui/react-runtime": ["@opentui/react-runtime@workspace:packages/react-runtime"],
 
     "@opentui/solid": ["@opentui/solid@workspace:packages/solid"],
 
@@ -1230,6 +1281,8 @@
     "oniguruma-parser": ["oniguruma-parser@0.12.2", "", {}, "sha512-6HVa5oIrgMC6aA6WF6XyyqbhRPJrKR02L20+2+zpDtO5QAzGHAUGw5TKQvwi5vctNnRHkJYmjAhRVQF2EKdTQw=="],
 
     "oniguruma-to-es": ["oniguruma-to-es@4.3.6", "", { "dependencies": { "oniguruma-parser": "^0.12.2", "regex": "^6.1.0", "regex-recursion": "^6.0.2" } }, "sha512-csuQ9x3Yr0cEIs/Zgx/OEt9iBw9vqIunAPQkx19R/fiMq2oGVTgcMqO/V3Ybqefr1TBvosI6jU539ksaBULJyA=="],
+
+    "open-ink": ["open-ink@workspace:packages/open-ink"],
 
     "oxfmt": ["oxfmt@0.41.0", "", { "dependencies": { "tinypool": "2.1.0" }, "optionalDependencies": { "@oxfmt/binding-android-arm-eabi": "0.41.0", "@oxfmt/binding-android-arm64": "0.41.0", "@oxfmt/binding-darwin-arm64": "0.41.0", "@oxfmt/binding-darwin-x64": "0.41.0", "@oxfmt/binding-freebsd-x64": "0.41.0", "@oxfmt/binding-linux-arm-gnueabihf": "0.41.0", "@oxfmt/binding-linux-arm-musleabihf": "0.41.0", "@oxfmt/binding-linux-arm64-gnu": "0.41.0", "@oxfmt/binding-linux-arm64-musl": "0.41.0", "@oxfmt/binding-linux-ppc64-gnu": "0.41.0", "@oxfmt/binding-linux-riscv64-gnu": "0.41.0", "@oxfmt/binding-linux-riscv64-musl": "0.41.0", "@oxfmt/binding-linux-s390x-gnu": "0.41.0", "@oxfmt/binding-linux-x64-gnu": "0.41.0", "@oxfmt/binding-linux-x64-musl": "0.41.0", "@oxfmt/binding-openharmony-arm64": "0.41.0", "@oxfmt/binding-win32-arm64-msvc": "0.41.0", "@oxfmt/binding-win32-ia32-msvc": "0.41.0", "@oxfmt/binding-win32-x64-msvc": "0.41.0" }, "bin": { "oxfmt": "bin/oxfmt" } }, "sha512-sKLdJZdQ3bw6x9qKiT7+eID4MNEXlDHf5ZacfIircrq6Qwjk0L6t2/JQlZZrVHTXJawK3KaMuBoJnEJPcqCEdg=="],
 

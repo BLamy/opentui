@@ -1,0 +1,41 @@
+{
+  "name": "@opentui/react-runtime",
+  "version": "0.6.7",
+  "description": "Shared React reconciler host config for OpenTUI renderers",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anomalyco/opentui",
+    "directory": "packages/react-runtime"
+  },
+  "module": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "main": "src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "bun run scripts/build.ts",
+    "publish": "bun ../../scripts/npm-publish.ts publish @opentui/react-runtime",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.1",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-reconciler": "^0.33.0",
+    "react": ">=19.2.0",
+    "typescript": "^5"
+  },
+  "peerDependencies": {
+    "react": ">=19.2.0"
+  },
+  "dependencies": {
+    "@opentui/core": "workspace:*",
+    "react-reconciler": "^0.33.0"
+  }
+}

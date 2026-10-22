@@ -39,9 +39,11 @@ function releasePackage(directory: string, name: string, requiresCore?: boolean)
   return { name, rootDir, distDir: join(rootDir, "dist"), requiresCore }
 }
 
-// Release order. React and Solid come before qrcode and keymap, which list them as peers.
+// Release order. React and Solid come before qrcode and keymap, which list them as peers. The React
+// runtime comes before React, which depends on it.
 export const RELEASE_PACKAGES: readonly ReleasePackage[] = [
   releasePackage("core", "@opentui/core"),
+  releasePackage("react-runtime", "@opentui/react-runtime", true),
   releasePackage("react", "@opentui/react", true),
   releasePackage("solid", "@opentui/solid", true),
   releasePackage("three", "@opentui/three", true),
