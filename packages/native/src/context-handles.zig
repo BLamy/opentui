@@ -1,4 +1,5 @@
 const std = @import("std");
+const atomic64 = @import("atomic64.zig");
 
 pub const Handle = extern struct {
     context_id: u64,
@@ -36,7 +37,7 @@ pub const Error = error{
 };
 
 // Only identity allocation is shared. IDs never wrap or identify a later context.
-var last_context_id: std.atomic.Value(u64) = .init(0);
+var last_context_id: atomic64.Value = .init(0);
 
 const Slot = struct {
     generation: u32 = 1,

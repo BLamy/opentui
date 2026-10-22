@@ -182,6 +182,7 @@ fn addMiniaudioShim(
             flags[3] = macos_sdk_path.?;
             break :blk flags;
         },
+        .wasi => &.{ "-std=c99", "-DMA_NO_DEVICE_IO", "-DMA_NO_THREADING", "-D_WASI_EMULATED_SIGNAL" },
         else => &.{"-std=c99"},
     };
 
@@ -376,10 +377,13 @@ fn addNativeAudioDependencies(
 
 fn addYogaDependencies(b: *std.Build, module: *std.Build.Module, test_allocator: bool) void {
     const yoga_dep = b.dependency("yoga", .{});
+    const is_wasm = if (module.resolved_target) |target| target.result.cpu.arch.isWasm() else false;
+    // wasi libc++abi has no exception support.
+    const base_flags: []const []const u8 = if (is_wasm) &.{ "-std=c++20", "-fno-exceptions", "-frtti" } else &YOGA_CXX_FLAGS;
     const flags = if (test_allocator)
-        appendCFlags(b, &YOGA_CXX_FLAGS, &.{"-DOT_YOGA_TEST_ALLOCATOR"})
+        appendCFlags(b, base_flags, &.{"-DOT_YOGA_TEST_ALLOCATOR"})
     else
-        &YOGA_CXX_FLAGS;
+        base_flags;
 
     module.link_libcpp = true;
     module.addIncludePath(yoga_dep.path(""));
@@ -392,6 +396,7 @@ fn addYogaDependencies(b: *std.Build, module: *std.Build.Module, test_allocator:
 }
 
 fn ghosttyVtAvailable(target: std.Build.ResolvedTarget) bool {
+    if (target.result.cpu.arch == .wasm32 and target.result.os.tag == .wasi) return true;
     switch (target.result.cpu.arch) {
         .x86_64, .aarch64 => {},
         else => return false,
@@ -533,6 +538,7 @@ pub fn build(b: *std.Build) void {
     const debug_use_llvm = b.option(bool, "debug-llvm", "Use LLVM backend for debug/test artifacts");
     const target_option = b.option([]const u8, "library-target", "Build static/shared libraries for a specific target (e.g., 'x86_64-linux-gnu.2.17').");
     const build_all = b.option(bool, "all", "Build for all supported targets") orelse false;
+    const build_wasm = b.option(bool, "wasm", "Build the browser wasm32-wasi target") orelse false;
     const gpa_safe_stats = b.option(bool, "gpa-safe-stats", "Enable GPA safety checks for trustworthy allocator stats") orelse false;
     const macos_sdk_path = resolveMacOSSDKPath(b);
     const build_options = b.addOptions();
@@ -548,7 +554,9 @@ pub fn build(b: *std.Build) void {
     addNativeAudioDependencies(b, opentui_module, module_target, macos_sdk_path);
     addYogaDependencies(b, opentui_module, false);
 
-    if (target_option) |target_str| {
+    if (build_wasm) {
+        buildWasmTarget(b, optimize, build_options);
+    } else if (target_option) |target_str| {
         // Build single target
         buildSingleTarget(b, target_str, optimize, build_options, macos_sdk_path) catch |err| {
             std.debug.print("Error building target '{s}': {}\n", .{ target_str, err });
@@ -727,6 +735,42 @@ pub fn build(b: *std.Build) void {
     });
     const run_debug = b.addRunArtifact(debug_exe);
     debug_step.dependOn(&run_debug.step);
+}
+
+fn buildWasmTarget(b: *std.Build, optimize: std.builtin.OptimizeMode, build_options: *std.Build.Step.Options) void {
+    const target = b.resolveTargetQuery(.{
+        .cpu_arch = .wasm32,
+        .os_tag = .wasi,
+    });
+    const module = b.createModule(.{
+        .root_source_file = b.path(ROOT_SOURCE_FILE),
+        .target = target,
+        .optimize = optimize,
+        .single_threaded = true,
+        .link_libc = true,
+        .strip = optimize != .Debug,
+    });
+    applyDependencies(b, module, optimize, target, build_options);
+    addMiniaudioShim(b, module, target, null);
+    addImageShim(b, module, target, null);
+    addYogaDependencies(b, module, false);
+
+    const exe = b.addExecutable(.{
+        .name = LIB_NAME,
+        .root_module = module,
+    });
+    exe.entry = .disabled;
+    exe.rdynamic = true;
+    exe.export_memory = true;
+    exe.export_table = true;
+    exe.wasi_exec_model = .reactor;
+
+    const install = b.addInstallArtifact(exe, .{
+        .dest_dir = .{ .override = .{ .custom = "../lib/wasm32-wasi" } },
+    });
+    const step = b.step("build-wasm32-wasi", "Build for WebAssembly (browser)");
+    step.dependOn(&install.step);
+    b.getInstallStep().dependOn(&install.step);
 }
 
 fn buildAllTargets(

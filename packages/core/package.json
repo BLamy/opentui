@@ -13,6 +13,7 @@
   "type": "module",
   "imports": {
     "#opentui/runtime-assets": {
+      "browser": "./src/platform/runtime-assets.browser.ts",
       "bun": "./src/platform/runtime-assets.bun.ts",
       "node": "./src/platform/runtime-assets.node.ts",
       "default": "./src/platform/runtime-assets.node.ts"
@@ -29,6 +30,9 @@
     "prepare:native": "cd ../native && bun run prepare:zig",
     "build:native": "bun run prepare:native && bun scripts/build.ts --native",
     "build:native:dev": "bun run prepare:native && bun scripts/build.ts --native --dev",
+    "build:wasm": "bun run prepare:native && bun scripts/build.ts --wasm",
+    "build:wasm:dev": "bun run prepare:native && bun scripts/build.ts --wasm --dev",
+    "test:wasm": "bun test --preload ./src/browser/wasm-test-preload.ts",
     "vendor:update:images": "cd ../native && sh src/vendor/update.sh",
     "vendor:update:zig": "cd ../native && sh src/vendor/update-zig-deps.sh",
     "test:native": "cd ../native && bun run test",
@@ -99,6 +103,10 @@
       "types": "./src/testing.ts",
       "bun": "./src/testing.ts",
       "import": "./src/testing.ts"
+    },
+    "./browser": {
+      "types": "./src/browser.ts",
+      "import": "./src/browser.ts"
     },
     "./runtime-plugin": {
       "types": "./src/runtime-plugin.ts",

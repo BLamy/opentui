@@ -6,6 +6,7 @@
     "prepare:zig": "sh scripts/prepare-zig-deps.sh",
     "build": "bun run prepare:zig && zig build -Doptimize=ReleaseFast",
     "build:dev": "bun run prepare:zig && zig build -Doptimize=Debug",
+    "build:wasm": "bun run prepare:zig && zig build -Dwasm=true -Doptimize=ReleaseFast",
     "test": "bun run prepare:zig && sh scripts/test.sh",
     "test:lifetime": "bun run prepare:zig && zig build test-lifetime --summary all",
     "test:branch-cov": "bun run prepare:zig && bun scripts/branch-cov.ts",

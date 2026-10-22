@@ -98,6 +98,7 @@ cp -R "$SOURCE_DIR/ghostty/pkg/android-ndk" "$SOURCE_DIR/ghostty/pkg/apple-sdk" 
 cp "$VENDOR_DIR/zig-deps/ghostty-build.zig" "$DEPS_DIR/ghostty/build.zig"
 cp "$VENDOR_DIR/zig-deps/ghostty-build.zig.zon" "$DEPS_DIR/ghostty/build.zig.zon"
 git -C "$DEPS_DIR/ghostty" apply "$VENDOR_DIR/zig-deps/ghostty-shared-deps.patch"
+git -C "$DEPS_DIR/ghostty" apply "$VENDOR_DIR/zig-deps/ghostty-wasi-shm.patch"
 
 for name in uucode-ghostty uucode-opentui; do
   extract "$TMP_DIR/$name.tar.gz" "$SOURCE_DIR/$name"

@@ -1,5 +1,5 @@
 import type { BufferAccess } from "../buffer.js"
-import { toArrayBuffer } from "../platform/ffi.js"
+import { nativeArray } from "../platform/ffi.js"
 import type { NativeContextBufferLease, NativeContextHandle, RenderLib } from "../zig.js"
 
 type BufferSnapshot = Omit<NativeContextBufferLease, "handle">
@@ -45,19 +45,23 @@ export function withLazyBufferAccess<T>(
       generation: value.generation,
       get char() {
         guard()
-        return (char ??= new Uint32Array(toArrayBuffer(value.char, 0, value.width * value.height * 4)))
+        if (!char || char.byteLength === 0) char = nativeArray(Uint32Array, value.char, value.width * value.height * 4)
+        return char
       },
       get fg() {
         guard()
-        return (fg ??= new Uint16Array(toArrayBuffer(value.fg, 0, value.width * value.height * 8)))
+        if (!fg || fg.byteLength === 0) fg = nativeArray(Uint16Array, value.fg, value.width * value.height * 8)
+        return fg
       },
       get bg() {
         guard()
-        return (bg ??= new Uint16Array(toArrayBuffer(value.bg, 0, value.width * value.height * 8)))
+        if (!bg || bg.byteLength === 0) bg = nativeArray(Uint16Array, value.bg, value.width * value.height * 8)
+        return bg
       },
       get attributes() {
         guard()
-        return (attributes ??= new Uint32Array(toArrayBuffer(value.attributes, 0, value.width * value.height * 4)))
+        if (!attributes || attributes.byteLength === 0) attributes = nativeArray(Uint32Array, value.attributes, value.width * value.height * 4)
+        return attributes
       },
     }
     return cells

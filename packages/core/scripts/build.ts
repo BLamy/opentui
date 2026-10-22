@@ -50,6 +50,7 @@ const packageJson: PackageJson = JSON.parse(readFileSync(join(rootDir, "package.
 const args = process.argv.slice(2)
 const buildLib = args.find((arg) => arg === "--lib")
 const buildNative = args.find((arg) => arg === "--native")
+const buildWasm = args.find((arg) => arg === "--wasm")
 const isDev = args.includes("--dev")
 const buildAll = args.includes("--all") // Build for all platforms
 const gpaSafeStats = args.includes("--gpa-safe-stats")
@@ -65,8 +66,8 @@ const getHostVariant = (): Variant => {
   return hostVariant
 }
 
-if (!buildLib && !buildNative) {
-  console.error("Error: Please specify --lib, --native, or both")
+if (!buildLib && !buildNative && !buildWasm) {
+  console.error("Error: Please specify --lib, --native, --wasm, or a combination")
   process.exit(1)
 }
 
@@ -317,6 +318,22 @@ export default module.default
   }
 }
 
+const wasmArtifactPath = join(nativeRoot, "lib", "wasm32-wasi", "opentui.wasm")
+
+if (buildWasm) {
+  console.log(`Building browser wasm ${isDev ? "dev" : "prod"} artifact...`)
+  const zigArgs = ["build", "-Dwasm=true", `-Doptimize=${isDev ? "Debug" : "ReleaseFast"}`]
+  if (gpaSafeStats) {
+    zigArgs.push("-Dgpa-safe-stats=true")
+  }
+  runCommand("zig", zigArgs, nativeRoot, "Error: Zig wasm build failed")
+  if (!existsSync(wasmArtifactPath)) {
+    console.error(`Error: Browser wasm artifact was not found at ${wasmArtifactPath}`)
+    process.exit(1)
+  }
+  console.log(`Built browser wasm: ${wasmArtifactPath}`)
+}
+
 if (buildLib) {
   if (!buildNative)
     runCommand("bun", ["scripts/native-abi.ts", "--check"], rootDir, "Error: Native ABI metadata is stale")
@@ -384,6 +401,44 @@ if (buildLib) {
     transpileEntryPoint(entryPoint, join(distDir, outputFile))
   }
 
+  // The browser bundle loads the native bindings from opentui.wasm and resolves
+  // Node built-ins to browser shims.
+  const { browserShimAliases } = await import("../src/browser/shims/index.ts")
+  const shimAliases = browserShimAliases()
+  const browserBuild = await Bun.build({
+    entrypoints: [join(rootDir, "src/browser.ts")],
+    outdir: distDir,
+    target: "browser",
+    format: "esm",
+    splitting: true,
+    sourcemap: "external",
+    conditions: ["browser"],
+    naming: { entry: "[name].[ext]", chunk: "browser-chunks/[name]-[hash].[ext]" },
+    external: [...externalDeps, "*.wasm", "*.scm"],
+    plugins: [
+      {
+        name: "opentui-browser-shims",
+        setup(build) {
+          build.onResolve({ filter: /^(node:)?[a-z_/]+$/ }, (args) => {
+            const alias = shimAliases.find((entry) => entry.find.test(args.path))
+            return alias ? { path: alias.replacement } : undefined
+          })
+        },
+      },
+    ],
+  })
+  if (!browserBuild.success) {
+    for (const log of browserBuild.logs) console.error(log)
+    console.error("Error: Browser bundle build failed")
+    process.exit(1)
+  }
+  if (existsSync(wasmArtifactPath)) {
+    copyFileSync(wasmArtifactPath, join(distDir, "opentui.wasm"))
+    console.log("  Copied browser wasm to dist/opentui.wasm")
+  } else {
+    console.warn("  Browser wasm not found; run build:wasm to include dist/opentui.wasm")
+  }
+
   // Build updater as a separate entry so generator code stays out of the core runtime bundle.
   runCommand(
     "bun",
@@ -415,6 +470,7 @@ if (buildLib) {
     "dist/index.bun.js",
     "dist/testing.bun.js",
     "dist/yoga.bun.js",
+    "dist/browser.js",
   ]
   for (const filePath of bundledFiles) {
     const fullPath = join(rootDir, filePath)
@@ -524,6 +580,11 @@ if (buildLib) {
       import: "./testing.js",
       types: "./testing.d.ts",
     },
+    "./browser": {
+      types: "./browser.d.ts",
+      import: "./browser.js",
+    },
+    "./browser/opentui.wasm": "./opentui.wasm",
     "./runtime-plugin": {
       types: "./runtime-plugin.d.ts",
       bun: "./runtime-plugin.js",

@@ -138,7 +138,8 @@ fn tryJoinThread(thread: std.Thread) bool {
             thread.join();
             break :blk true;
         },
-        else => @compileError("Unsupported clipboard worker target"),
+        // wasm builds are single-threaded and never start clipboard workers.
+        else => if (builtin.cpu.arch.isWasm()) unreachable else @compileError("Unsupported clipboard worker target"),
     };
 }
 

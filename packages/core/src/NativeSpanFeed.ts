@@ -1,4 +1,4 @@
-import { toArrayBuffer, type Pointer } from "./platform/ffi.js"
+import { nativeArray, toArrayBuffer, usesWasmFFI, type Pointer } from "./platform/ffi.js"
 import { resolveRenderLib } from "./zig.js"
 import { SpanInfoStruct } from "./zig-structs.js"
 import type { NativeSpanFeedOptions } from "./zig-structs.js"
@@ -65,7 +65,8 @@ export class NativeSpanFeed {
   readonly streamPtr: Pointer
   private readonly lib = resolveRenderLib()
   private readonly eventHandler: StreamEventHandler
-  private chunkMap = new Map<Pointer, ArrayBuffer>()
+  // The wasm backend cannot alias native memory, so it records chunk lengths and views spans on demand.
+  private chunkMap = new Map<Pointer, ArrayBuffer | number>()
   private dataHandlers = new Set<DataHandler>()
   private errorHandlers = new Set<(code: number) => void>()
   private drainBuffer: Uint8Array | null = null
@@ -214,8 +215,7 @@ export class NativeSpanFeed {
           const chunkLen = toNumber(arg1)
           if (chunkLen > 0 && arg0) {
             if (!this.chunkMap.has(arg0)) {
-              const buffer = toArrayBuffer(arg0, 0, chunkLen)
-              this.chunkMap.set(arg0, buffer)
+              this.chunkMap.set(arg0, usesWasmFFI ? chunkLen : toArrayBuffer(arg0, 0, chunkLen))
             }
           }
           break
@@ -278,9 +278,15 @@ export class NativeSpanFeed {
           if (this.pendingClose || span.len === 0) continue
 
           const buffer = this.chunkMap.get(span.chunkPtr)
-          if (!buffer || span.offset + span.len > buffer.byteLength) continue
+          if (buffer === undefined) continue
+          if (typeof buffer === "number") {
+            if (span.offset + span.len > buffer) continue
+          } else if (span.offset + span.len > buffer.byteLength) continue
 
-          const slice = new Uint8Array(buffer, span.offset, span.len)
+          const slice =
+            typeof buffer === "number"
+              ? nativeArray(Uint8Array, span.chunkPtr, span.len, span.offset)
+              : new Uint8Array(buffer, span.offset, span.len)
 
           for (const handler of this.dataHandlers) {
             try {

@@ -1,7 +1,9 @@
 import {
   dlopen,
   ffiBool,
+  nativeArray,
   toArrayBuffer,
+  usesWasmFFI,
   toPointer,
   type FFICallbackInstance,
   type Pointer,
@@ -867,16 +869,21 @@ export type EmbeddedTerminalMouse = {
 let targetLibPath: string | undefined
 let targetLibError: Error | undefined
 
-try {
-  targetLibPath = await resolveNativeLibraryPath()
-  if (isBunfsPath(targetLibPath)) {
-    targetLibPath = targetLibPath.replace("../", "")
+if (usesWasmFFI) {
+  // The wasm host already instantiated the module; dlopen ignores the path.
+  targetLibPath = "opentui.wasm"
+} else {
+  try {
+    targetLibPath = await resolveNativeLibraryPath()
+    if (isBunfsPath(targetLibPath)) {
+      targetLibPath = targetLibPath.replace("../", "")
+    }
+    if (!existsSync(targetLibPath)) {
+      throw new Error(`OpenTUI native library does not exist at ${JSON.stringify(targetLibPath)}`)
+    }
+  } catch (error) {
+    targetLibError = error instanceof Error ? error : new Error(String(error))
   }
-  if (!existsSync(targetLibPath)) {
-    throw new Error(`OpenTUI native library does not exist at ${JSON.stringify(targetLibPath)}`)
-  }
-} catch (error) {
-  targetLibError = error instanceof Error ? error : new Error(String(error))
 }
 
 registerEnvVar({
@@ -6919,7 +6926,7 @@ export class FFIRenderLib {
             const result = entry.measure(width, widthMode, height, heightMode)
             rejectAsyncCallback(result)
             const dimensions = new Float32Array([result?.width ?? NaN, result?.height ?? NaN])
-            new Float32Array(toArrayBuffer(output, 0, 8)).set(dimensions)
+            nativeArray(Float32Array, output, 8).set(dimensions)
           })
         },
         nativeCallbacks.ot_scene_measure_callback,

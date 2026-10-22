@@ -32,8 +32,9 @@ const Chunk = struct {
     refcount: u8 = 0,
 };
 
+// Addresses are u64 so the layout matches the TS struct on 32-bit (wasm) targets.
 pub const SpanInfo = extern struct {
-    chunk_ptr: usize,
+    chunk_ptr: u64,
     offset: u32,
     len: u32,
     chunk_index: u32,
@@ -41,7 +42,7 @@ pub const SpanInfo = extern struct {
     release_id: u64 = 0,
 
     pub fn slice(self: SpanInfo) []u8 {
-        const base: [*]u8 = @ptrFromInt(self.chunk_ptr);
+        const base: [*]u8 = @ptrFromInt(@as(usize, @intCast(self.chunk_ptr)));
         const start: usize = @intCast(self.offset);
         const length: usize = @intCast(self.len);
         return base[start .. start + length];
@@ -152,12 +153,12 @@ const SpanRing = struct {
 };
 
 pub const ReserveInfo = extern struct {
-    ptr: usize,
+    ptr: u64,
     len: u32,
     reserved: u32,
 
     pub fn slice(self: ReserveInfo) []u8 {
-        const base: [*]u8 = @ptrFromInt(self.ptr);
+        const base: [*]u8 = @ptrFromInt(@as(usize, @intCast(self.ptr)));
         const length: usize = @intCast(self.len);
         return base[0..length];
     }

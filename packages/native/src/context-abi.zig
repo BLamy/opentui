@@ -4942,7 +4942,7 @@ fn nullablePointer(comptime T: type) ?std.builtin.Type.Pointer {
 // export_symbols. These checks tie the header to Zig declarations that it does not define.
 comptime {
     @setEvalBranchQuota(10_000);
-    if (@sizeOf(usize) != 8) @compileError("The OpenTUI C ABI requires a 64-bit target");
+    if (@sizeOf(usize) != 8 and !builtin.cpu.arch.isWasm()) @compileError("The OpenTUI C ABI requires a 64-bit target");
     const MousePointerStyle = @import("terminal.zig").MousePointerStyle;
     for (std.meta.tags(MousePointerStyle)) |style| {
         var name: [@tagName(style).len]u8 = undefined;

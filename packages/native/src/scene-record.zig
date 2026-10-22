@@ -136,45 +136,43 @@ fn zeroHandle(value: c.ot_handle) bool {
     return value.context_id == 0 and value.slot == 0 and value.generation == 0;
 }
 
-comptime {
-    std.debug.assert(@sizeOf(usize) >= 8); // commandSize adds up to four u32 lengths.
-}
 
 /// Unpadded byte count of a command record, after checking its fixed fields.
-fn commandSize(operation: u32, body: []const u8) !usize {
+// u64 because commandSize adds up to four u32 lengths, which can overflow a 32-bit usize.
+fn commandSize(operation: u32, body: []const u8) !u64 {
     switch (operation) {
         c.OT_SCENE_RECORD_DRAW => {
             const value = try fixed(c.ot_scene_record_draw, body);
             const draw = try fixed(c.ot_buffer_draw_header, body[@sizeOf(c.ot_scene_record_draw)..]);
             if (value.text_length > c.OT_BUFFER_TEXT_BYTES_MAX or value.bottom_length > c.OT_BUFFER_TEXT_BYTES_MAX or
                 (draw.operation != c.OT_BUFFER_DRAW_COMPOSE and !zeroHandle(value.source))) return error.InvalidOptions;
-            return @sizeOf(c.ot_scene_record_draw) + @as(usize, draw.struct_size) + value.text_length + value.bottom_length;
+            return @sizeOf(c.ot_scene_record_draw) + @as(u64, draw.struct_size) + value.text_length + value.bottom_length;
         },
         c.OT_SCENE_RECORD_STACK => return @sizeOf(c.ot_scene_record_stack),
         c.OT_SCENE_RECORD_GRID => {
             const value = try fixed(c.ot_scene_record_grid, body);
-            return @sizeOf(c.ot_scene_record_grid) + (@as(usize, value.column_count) + value.row_count) * @sizeOf(i32);
+            return @sizeOf(c.ot_scene_record_grid) + (@as(u64, value.column_count) + value.row_count) * @sizeOf(i32);
         },
         c.OT_SCENE_RECORD_PACKED => {
             const value = try fixed(c.ot_scene_record_packed, body);
             if (value.reserved != 0) return error.InvalidOptions;
-            return @sizeOf(c.ot_scene_record_packed) + @as(usize, value.byte_count);
+            return @sizeOf(c.ot_scene_record_packed) + @as(u64, value.byte_count);
         },
         c.OT_SCENE_RECORD_SUPERSAMPLE => {
             const value = try fixed(c.ot_scene_record_supersample, body);
             if (value.reserved != 0) return error.InvalidOptions;
-            return @sizeOf(c.ot_scene_record_supersample) + @as(usize, value.byte_count);
+            return @sizeOf(c.ot_scene_record_supersample) + @as(u64, value.byte_count);
         },
         c.OT_SCENE_RECORD_GRAYSCALE => {
             const value = try fixed(c.ot_scene_record_grayscale, body);
             const flags = c.OT_SCENE_RECORD_GRAYSCALE_FOREGROUND | c.OT_SCENE_RECORD_GRAYSCALE_BACKGROUND | c.OT_SCENE_RECORD_GRAYSCALE_SUPERSAMPLED;
             if (value.flags & ~@as(u32, flags) != 0) return error.InvalidOptions;
-            return @sizeOf(c.ot_scene_record_grayscale) + @as(usize, value.sample_count) * @sizeOf(f32);
+            return @sizeOf(c.ot_scene_record_grayscale) + @as(u64, value.sample_count) * @sizeOf(f32);
         },
         c.OT_SCENE_RECORD_COLOR_MATRIX => {
             const value = try fixed(c.ot_scene_record_color_matrix, body);
             if (value.has_mask > 1 or (value.has_mask == 0 and value.mask_count != 0)) return error.InvalidOptions;
-            return @sizeOf(c.ot_scene_record_color_matrix) + @as(usize, value.mask_count) * @sizeOf(f32);
+            return @sizeOf(c.ot_scene_record_color_matrix) + @as(u64, value.mask_count) * @sizeOf(f32);
         },
         c.OT_SCENE_RECORD_TEXT_VIEW, c.OT_SCENE_RECORD_EDITOR_VIEW, c.OT_SCENE_RECORD_SCENE_TEXT => return @sizeOf(c.ot_scene_record_view),
         c.OT_SCENE_RECORD_IMAGE => return @sizeOf(c.ot_scene_record_image),
@@ -209,7 +207,7 @@ pub fn index(bytes: []const u8, slots: []const PaintSlot, segments: []Segments) 
             current.?.* = .{ .start = @intCast(offset + size), .end = @intCast(offset + size) };
         } else {
             const segment = current orelse return error.InvalidOptions;
-            if (std.mem.alignForward(usize, try commandSize(header.operation, body), 8) != size) return error.InvalidOptions;
+            if (std.mem.alignForward(u64, try commandSize(header.operation, body), 8) != size) return error.InvalidOptions;
             segment.end = @intCast(offset + size);
         }
         offset += size;

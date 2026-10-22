@@ -22,8 +22,10 @@ namespace {
 // Yoga calls Zig thunks (measure, dirtied, logger) inside this guard. They
 // re-enter C++ only through noexcept bridge functions or Yoga calls that cannot
 // throw, so no exception unwinds through a Zig frame.
+// Builds without exceptions (wasm) trap on allocation failure instead.
 template <typename F>
 uint32_t checked(F&& operation) noexcept {
+#if defined(__cpp_exceptions)
   try {
     operation();
     return OT_YOGA_OK;
@@ -32,6 +34,10 @@ uint32_t checked(F&& operation) noexcept {
   } catch (...) {
     return OT_YOGA_EXCEPTION;
   }
+#else
+  operation();
+  return OT_YOGA_OK;
+#endif
 }
 
 constexpr float undefined = std::numeric_limits<float>::quiet_NaN();
@@ -73,11 +79,15 @@ uint32_t otYogaConfigCreate(YGConfigRef* out) noexcept {
 }
 
 int otYogaFormatLog(uint8_t* out, uint32_t capacity, const char* format, va_list args) noexcept {
+#if defined(__cpp_exceptions)
   try {
     return std::vsnprintf(reinterpret_cast<char*>(out), capacity, format, args);
   } catch (...) {
     return -1;
   }
+#else
+  return std::vsnprintf(reinterpret_cast<char*>(out), capacity, format, args);
+#endif
 }
 
 uint32_t otYogaNodeCreate(YGConfigConstRef config, YGNodeRef* out) noexcept {

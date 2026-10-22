@@ -1,6 +1,12 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const c = @import("miniaudio");
+const atomic64 = @import("atomic64.zig");
+
+fn spawnStreamWorker(stream: anytype) !std.Thread {
+    if (builtin.single_threaded) return error.ThreadQuotaExceeded;
+    return std.Thread.spawn(.{}, streamDecoderWorker, .{stream});
+}
 const io = if (builtin.is_test) std.testing.io else @import("root").io;
 
 pub const Status = struct {
@@ -186,7 +192,7 @@ pub const CaptureBuffer = struct {
     // This is the sole producer path. It never waits for space and drops the newest frames on overflow.
     pub fn write(self: *CaptureBuffer, input: [*]const f32, frame_count: u32) void {
         if (frame_count == 0) return;
-        _ = @atomicRmw(u64, &self.frames_received, .Add, frame_count, .monotonic);
+        _ = atomic64.fetchAdd(&self.frames_received, frame_count);
 
         const frames_to_write = @min(frame_count, c.ma_pcm_rb_available_write(&self.ring));
         var total_written: u32 = 0;
@@ -210,7 +216,7 @@ pub const CaptureBuffer = struct {
 
         const dropped = frame_count - total_written;
         if (dropped > 0) {
-            _ = @atomicRmw(u64, &self.frames_dropped, .Add, dropped, .monotonic);
+            _ = atomic64.fetchAdd(&self.frames_dropped, dropped);
         }
     }
 
@@ -237,16 +243,16 @@ pub const CaptureBuffer = struct {
         }
 
         if (total_read > 0) {
-            _ = @atomicRmw(u64, &self.frames_read, .Add, total_read, .monotonic);
+            _ = atomic64.fetchAdd(&self.frames_read, total_read);
         }
         return total_read;
     }
 
     pub fn snapshot(self: *CaptureBuffer) CaptureStats {
         return .{
-            .frames_received = @atomicLoad(u64, &self.frames_received, .monotonic),
-            .frames_read = @atomicLoad(u64, &self.frames_read, .monotonic),
-            .frames_dropped = @atomicLoad(u64, &self.frames_dropped, .monotonic),
+            .frames_received = atomic64.load(&self.frames_received),
+            .frames_read = atomic64.load(&self.frames_read),
+            .frames_dropped = atomic64.load(&self.frames_dropped),
             .sample_rate = self.sample_rate,
             .channels = self.channels,
             .buffered_frames = c.ma_pcm_rb_available_read(&self.ring),
@@ -705,7 +711,7 @@ fn streamDataSourceRead(
     }
 
     if (total_read > 0) {
-        _ = @atomicRmw(u64, &stream.frames_played, .Add, total_read, .monotonic);
+        _ = atomic64.fetchAdd(&stream.frames_played, total_read);
     }
 
     available = c.ma_pcm_rb_available_read(&stream.pcm_ring);
@@ -934,11 +940,11 @@ fn streamDecoderWorker(stream: *Stream) void {
             const input = if (input_frames != 0) samples[input_offset / @sizeOf(f32) ..].ptr else null;
             if (input == null) {
                 const input_rate = stream.input_sample_rate;
-                const received_frames = @atomicLoad(u64, &stream.bytes_received, .monotonic) / frame_bytes;
+                const received_frames = atomic64.load(&stream.bytes_received) / frame_bytes;
                 // Round input latency separately to preserve sub-frame downsampling tails.
                 const tail = (@as(u128, c.ma_data_converter_get_input_latency(&converter)) * stream.sample_rate + input_rate - 1) / input_rate;
                 const target: u64 = if (received_frames == 0) 0 else @intCast((@as(u128, received_frames) * stream.sample_rate + input_rate - 1) / input_rate + tail);
-                const produced = @atomicLoad(u64, &stream.frames_decoded, .monotonic);
+                const produced = atomic64.load(&stream.frames_decoded);
                 frames_read = @min(frames_read, target -| produced);
                 if (frames_read == 0) break :blk c.MA_AT_END;
                 input_frames = stream_decoder_chunk_frames;
@@ -959,7 +965,7 @@ fn streamDecoderWorker(stream: *Stream) void {
                 failDecoderWorker(stream);
                 return;
             }
-            _ = @atomicRmw(u64, &stream.frames_decoded, .Add, decoded_frames, .monotonic);
+            _ = atomic64.fetchAdd(&stream.frames_decoded, decoded_frames);
         }
 
         if (decoderExitRequested(stream)) return;
@@ -975,7 +981,7 @@ fn streamDecoderWorker(stream: *Stream) void {
             }
             if (@atomicLoad(u32, &stream.input_ended, .acquire) != 0) {
                 @atomicStore(u32, &stream.decoder_finished, 1, .release);
-                if (is_pcm and @atomicLoad(u64, &stream.frames_decoded, .monotonic) == 0) endStreamPlayback(stream);
+                if (is_pcm and atomic64.load(&stream.frames_decoded) == 0) endStreamPlayback(stream);
                 stream.input_lock.unlock(io);
                 return;
             }
@@ -1854,7 +1860,7 @@ pub fn createStream(engine: *Engine, options_ptr: ?*const StreamOptions, out_str
     e.updateActiveVoiceCount();
     e.lock.unlock(io);
 
-    stream.worker = std.Thread.spawn(.{}, streamDecoderWorker, .{stream}) catch {
+    stream.worker = spawnStreamWorker(stream) catch {
         e.lock.lockUncancelable(io);
         if (stream.sound_ready) {
             _ = c.ma_sound_stop(&stream.sound);
@@ -1910,7 +1916,7 @@ pub fn writeStream(
 
     stream.input_write = (stream.input_write + write_count) % stream.input_buffer.len;
     stream.input_count += write_count;
-    _ = @atomicRmw(u64, &stream.bytes_received, .Add, write_count, .monotonic);
+    _ = atomic64.fetchAdd(&stream.bytes_received, write_count);
     stream.input_condition.signal(io);
     return @intCast(write_count);
 }
@@ -1994,7 +2000,7 @@ pub fn restartStream(engine: *Engine, stream_id: u32) i32 {
         }
     }
 
-    stream.worker = std.Thread.spawn(.{}, streamDecoderWorker, .{stream}) catch {
+    stream.worker = spawnStreamWorker(stream) catch {
         failStreamWithCode(stream, Status.err_no_space);
         return Status.err_no_space;
     };
@@ -2042,9 +2048,9 @@ pub fn setStreamGroup(engine: *Engine, stream_id: u32, group_id: u32) i32 {
 
 fn snapshotStream(stream: *Stream, final: bool) StreamStats {
     return .{
-        .bytes_received = @atomicLoad(u64, &stream.bytes_received, .monotonic),
-        .frames_decoded = @atomicLoad(u64, &stream.frames_decoded, .monotonic),
-        .frames_played = @atomicLoad(u64, &stream.frames_played, .monotonic),
+        .bytes_received = atomic64.load(&stream.bytes_received),
+        .frames_decoded = atomic64.load(&stream.frames_decoded),
+        .frames_played = atomic64.load(&stream.frames_played),
         .state = loadStreamState(stream),
         .sample_rate = stream.sample_rate,
         .channels = 2,

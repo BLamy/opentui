@@ -1,5 +1,6 @@
 import { createRequire } from "node:module"
 import { fileURLToPath } from "node:url"
+import { WASM_FFI_GLOBAL_KEY, createWasmBackend, type WasmFfiBackend, type WasmFfiHost } from "./ffi-wasm.js"
 
 declare const pointerBrand: unique symbol
 
@@ -199,12 +200,19 @@ const isBun =
   typeof process.versions === "object" &&
   process.versions !== null &&
   typeof process.versions.bun === "string"
-export const usesBunFFI = isBun
+const wasmHost = (globalThis as Record<string, unknown>)[WASM_FFI_GLOBAL_KEY] as WasmFfiHost | undefined
+export const usesWasmFFI = wasmHost !== undefined
+export const usesBunFFI = isBun && !usesWasmFFI
 
-const requireModule = createRequire(import.meta.url)
 const backend = loadBackend()
 
 function loadBackend(): FfiBackend {
+  // A browser host instantiates the wasm build and registers it before core is imported.
+  if (wasmHost) {
+    return createWasmBackend(wasmHost) as unknown as FfiBackend
+  }
+
+  const requireModule = createRequire(import.meta.url)
   // Keep the Bun module import behind the runtime check so Node does not
   // resolve bun:ffi during import.
   if (isBun) {
@@ -222,11 +230,11 @@ function loadBackend(): FfiBackend {
 // Normalize foreign pointer-like values into the current runtime's pointer
 // representation before passing them to native code.
 export function toPointer(value: PointerInput): Pointer {
-  if (isBun && typeof value === "bigint") {
+  if ((isBun || usesWasmFFI) && typeof value === "bigint") {
     return toSafeNumberPointer(value) as Pointer
   }
 
-  if (!isBun && typeof value === "number") {
+  if (!isBun && !usesWasmFFI && typeof value === "number") {
     return toSafeBigIntPointer(value) as Pointer
   }
 
@@ -786,3 +794,19 @@ export const dlopen = backend.dlopen
 export const ptr = backend.ptr
 export const suffix = backend.suffix
 export const toArrayBuffer = backend.toArrayBuffer
+
+type NativeArrayConstructor<T> = {
+  new (buffer: ArrayBufferLike, byteOffset?: number, length?: number): T
+  readonly BYTES_PER_ELEMENT: number
+}
+
+// A typed view that writes through to native memory. The wasm backend cannot
+// alias linear memory with toArrayBuffer(), and its views detach when memory
+// grows, so callers must not keep them across native calls.
+export function nativeArray<T>(type: NativeArrayConstructor<T>, pointer: Pointer, byteLength: number, byteOffset = 0): T {
+  if (usesWasmFFI) {
+    const memory = (backend as unknown as WasmFfiBackend).memory
+    return new type(memory.buffer, Number(pointer) + byteOffset, byteLength / type.BYTES_PER_ELEMENT)
+  }
+  return new type(backend.toArrayBuffer(pointer, byteOffset, byteLength))
+}
