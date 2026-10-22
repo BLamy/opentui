@@ -19,7 +19,7 @@ OpenTUI is a library to build terminal user interfaces.
 
 OpenCode uses OpenTUI in production for millions of users.
 
-[Website](https://opentui.com) | [Documentation](https://opentui.com/docs) | [Packages](https://opentui.com/packages)
+[Website](https://opentui.com) | [Documentation](https://opentui.com/docs) | [Workbench](https://opentui.com/workbench) | [Packages](https://opentui.com/packages)
 
 ## Packages
 

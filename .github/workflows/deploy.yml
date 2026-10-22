@@ -51,6 +51,19 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+          use-cache: false
+
+      # Live docs examples run core in the page from opentui.wasm and core's browser assets.
+      - name: Build browser runtime
+        working-directory: packages/core
+        run: |
+          bun run build:wasm
+          bun run build:lib
+
       # Fetches the release tag itself.
       - name: Build site
         working-directory: packages/web
