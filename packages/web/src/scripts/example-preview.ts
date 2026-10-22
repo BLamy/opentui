@@ -1,11 +1,19 @@
 import { createBrowserTerminalSession } from "./browser-terminal-session"
 import { runExample } from "./example-runtime"
 import { fallbackTheme, isExampleTheme, mixColors } from "./example-theme"
-import { MESSAGE, OPENTUI_WASM_URL, decodeExampleHash, type FrameMessage, type RunMessage } from "./example-protocol"
+import {
+  MESSAGE,
+  OPENTUI_ASSETS_URL,
+  OPENTUI_WASM_URL,
+  decodeExampleHash,
+  type FrameMessage,
+  type RunMessage,
+} from "./example-protocol"
 
 // Runs one example in this frame. A new run loads a new frame, so timers and
 // globals from an earlier version of the program cannot leak into the next one.
 const WASM_URL = new URL(OPENTUI_WASM_URL, location.href).href
+const ASSETS_URL = new URL(OPENTUI_ASSETS_URL, location.href).href
 const FONT_FAMILY = '"OpenTUI Mono", ui-monospace, monospace'
 const FONT_SIZE = 13
 
@@ -56,9 +64,16 @@ async function run({ code, language, theme, requestId }: Omit<RunMessage, "type"
   )
   writeError = (message) => session.term.write(`\x1b[0m\r\n${message.replace(/\n/g, "\r\n")}\r\n`)
 
-  // TODO: syntax highlighting in Code and Markdown examples needs tree-sitter assets:
-  // pass setBrowserRuntimeAssets({ treeSitterWasm, treeSitterWorker }) once core supports it in the browser.
-  await runExample(code, language, { host: session.host, wasm: WASM_URL, backgroundColor: theme.background })
+  await runExample(code, language, {
+    host: session.host,
+    wasm: WASM_URL,
+    assets: {
+      treeSitterWasm: new URL("tree-sitter.wasm", ASSETS_URL).href,
+      treeSitterWorker: new URL("parser.worker.browser.js", ASSETS_URL).href,
+      treeSitterAssetBase: ASSETS_URL,
+    },
+    backgroundColor: theme.background,
+  })
   report("rendered")
 }
 

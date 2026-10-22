@@ -1,9 +1,15 @@
-import { createBrowserRenderer, loadOpenTUI, type BrowserTerminalHost } from "@opentui/core/browser"
+import {
+  createBrowserRenderer,
+  loadOpenTUI,
+  type BrowserRuntimeAssets,
+  type BrowserTerminalHost,
+} from "@opentui/core/browser"
 import { compileExample, type RuntimeKind } from "./example-compiler"
 
 export interface RuntimeContext {
   host: BrowserTerminalHost
   wasm: string
+  assets: BrowserRuntimeAssets
   backgroundColor: string
 }
 
@@ -20,8 +26,8 @@ const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as
 
 // Each example sees @opentui/core loaded against the wasm bindings, with
 // createCliRenderer() attached to the preview terminal.
-async function createCoreRuntime({ host, wasm, backgroundColor }: RuntimeContext): Promise<ExampleRuntime> {
-  const opentui = await loadOpenTUI({ wasm })
+async function createCoreRuntime({ host, wasm, assets, backgroundColor }: RuntimeContext): Promise<ExampleRuntime> {
+  const opentui = await loadOpenTUI({ wasm, assets })
   const renderers: Array<Awaited<ReturnType<typeof createBrowserRenderer>>> = []
 
   const createCliRenderer = async (config: Parameters<typeof opentui.createCliRenderer>[0] = {}) => {

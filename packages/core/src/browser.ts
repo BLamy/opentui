@@ -27,13 +27,13 @@ export interface BrowserLoadOptions {
 // The published package ships these files next to this module. Hosts that bundle
 // core from source pass their own URLs.
 function defaultWasmSource(): URL {
-  return new URL("./opentui.wasm", import.meta.url)
+  return new URL(/* @vite-ignore */ "./opentui.wasm", import.meta.url)
 }
 
 function defaultAssets(): BrowserRuntimeAssets {
   return {
-    treeSitterWasm: new URL("./tree-sitter.wasm", import.meta.url).href,
-    treeSitterWorker: new URL("./parser.worker.browser.js", import.meta.url).href,
+    treeSitterWasm: new URL(/* @vite-ignore */ "./tree-sitter.wasm", import.meta.url).href,
+    treeSitterWorker: new URL(/* @vite-ignore */ "./parser.worker.browser.js", import.meta.url).href,
     treeSitterAssetBase: new URL("./", import.meta.url).href,
   }
 }

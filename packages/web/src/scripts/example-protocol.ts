@@ -10,7 +10,8 @@ export const MESSAGE = {
 const BASE = (import.meta.env?.BASE_URL ?? "/").replace(/\/?$/, "/")
 
 export const EXAMPLE_FRAME_PATH = `${BASE}workbench/example/`
-export const OPENTUI_WASM_URL = `${BASE}opentui/opentui.wasm`
+export const OPENTUI_ASSETS_URL = `${BASE}opentui/`
+export const OPENTUI_WASM_URL = `${OPENTUI_ASSETS_URL}opentui.wasm`
 
 export interface ExampleSource {
   code: string
