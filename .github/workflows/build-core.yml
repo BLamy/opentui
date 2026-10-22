@@ -236,6 +236,16 @@ jobs:
           echo "Bun tests exited with $bun_status, Node tests with $node_status"
           [ "$bun_status" = 0 ] && [ "$node_status" = 0 ]
 
+      - name: Build browser wasm
+        if: runner.os == 'Linux'
+        working-directory: packages/core
+        run: bun run build:wasm
+
+      - name: Run TypeScript tests against the wasm build
+        if: runner.os == 'Linux'
+        working-directory: packages/core
+        run: bun run test:wasm
+
       - name: Test packed distribution
         if: runner.os == 'Linux'
         working-directory: packages/core

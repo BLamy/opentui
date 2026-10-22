@@ -3426,6 +3426,7 @@ export class FFIRenderLib {
   private readonly yogaLayout = new Float32Array(6)
   private readonly yogaU32 = new Uint32Array(1)
   private readonly yogaF32 = new Float32Array(1)
+  // Yoga writes pointer-sized values here. Callers clear it first so 4-byte wasm32 pointers read back intact.
   private readonly yogaU64 = new BigUint64Array(1)
   private yogaHost?: YogaHost
   private readonly ffiStructStorage = {
@@ -8272,6 +8273,7 @@ export class FFIRenderLib {
   }
 
   public yogaConfigCreate(): Pointer {
+    this.yogaU64[0] = 0n
     this.yogaChecked("yogaConfigCreateChecked", true, this.yogaU64)
     return toPointer(this.yogaU64[0]!)
   }
@@ -8322,11 +8324,13 @@ export class FFIRenderLib {
   }
 
   public yogaNodeCreateForOpenTUI(): Pointer {
+    this.yogaU64[0] = 0n
     this.yogaChecked("yogaNodeCreateForOpenTUIChecked", true, this.yogaU64)
     return toPointer(this.yogaU64[0]!)
   }
 
   public yogaNodeCreateWithConfig(config: Pointer): Pointer {
+    this.yogaU64[0] = 0n
     this.yogaChecked("yogaNodeCreateWithConfigChecked", true, config, this.yogaU64)
     return toPointer(this.yogaU64[0]!)
   }
@@ -8366,6 +8370,7 @@ export class FFIRenderLib {
   }
 
   public yogaNodeGetChild(node: Pointer, index: number): Pointer | null {
+    this.yogaU64[0] = 0n
     this.yogaChecked("yogaNodeGetChildChecked", false, node, index, this.yogaU64)
     return this.yogaU64[0] ? toPointer(this.yogaU64[0]) : null
   }

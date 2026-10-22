@@ -54,7 +54,9 @@ jobs:
         run: |
           cd packages/core
           bun run build:native --all
+          bun run build:wasm
           bun run build:lib
+          test -f dist/opentui.wasm
           cd ../qrcode
           bun run build
           cd ../three

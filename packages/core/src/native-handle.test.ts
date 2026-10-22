@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process"
 import { fileURLToPath } from "node:url"
 import { OptimizedBuffer, ResourceContext } from "./buffer.js"
 import { RGBA } from "./lib/RGBA.js"
-import { ptr } from "./platform/ffi.js"
+import { ptr, usesWasmFFI } from "./platform/ffi.js"
 import { TextBuffer } from "./text-buffer.js"
 import { TextBufferView } from "./text-buffer-view.js"
 import { EditBuffer } from "./edit-buffer.js"
@@ -271,7 +271,8 @@ describe("native handles", () => {
     }
   })
 
-  test.each([
+  // wasm builds have no audio device.
+  test.skipIf(usesWasmFFI).each([
     [
       "a live Context",
       "ContextBusy",
@@ -423,7 +424,8 @@ describe("context diagnostics", () => {
 })
 
 describe("FFI input views", () => {
-  test.each([
+  // wasm cannot address JS memory, so callers must pass views.
+  test.skipIf(usesWasmFFI).each([
     ["packed", (target: OptimizedBuffer, data: Uint8Array | number) => target.drawPackedBuffer(data, 48, 0, 0, 1, 1)],
     [
       "supersample",

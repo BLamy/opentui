@@ -32,7 +32,7 @@
     "build:native:dev": "bun run prepare:native && bun scripts/build.ts --native --dev",
     "build:wasm": "bun run prepare:native && bun scripts/build.ts --wasm",
     "build:wasm:dev": "bun run prepare:native && bun scripts/build.ts --wasm --dev",
-    "test:wasm": "bun test --preload ./src/browser/wasm-test-preload.ts",
+    "test:wasm": "bun test --preload ./src/browser/wasm-test-preload.ts --path-ignore-patterns='src/zig/zig-pkg/**' --path-ignore-patterns='src/tests/audio*.test.ts' --path-ignore-patterns='src/tests/renderer.kitty-transport.test.ts'",
     "vendor:update:images": "cd ../native && sh src/vendor/update.sh",
     "vendor:update:zig": "cd ../native && sh src/vendor/update-zig-deps.sh",
     "test:native": "cd ../native && bun run test",
