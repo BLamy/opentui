@@ -25,6 +25,8 @@ concurrency:
 
 jobs:
   build:
+    # Forks deploy with deploy-fork.yml.
+    if: github.repository == 'anomalyco/opentui'
     runs-on: blacksmith-8vcpu-ubuntu-2404
     steps:
       - name: Checkout main

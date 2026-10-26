@@ -136,6 +136,13 @@ export default defineConfig({
     server: {
       allowedHosts: true,
     },
+    // A build for a base path (scripts/site/rebase-site.ts) makes scripts load their chunks relative to themselves,
+    // so the preload paths that Vite writes need no rewriting.
+    ...(process.env.OPENTUI_SITE_BASE && {
+      experimental: {
+        renderBuiltUrl: (_filename, { hostType }) => (hostType === "js" ? { relative: true } : undefined),
+      },
+    }),
   },
   redirects: Object.assign({}, ...buildChannels().map((channel) => docsRedirects(channel))),
   markdown: {

@@ -7,11 +7,10 @@ export const MESSAGE = {
   status: "opentui-example:status",
 } as const
 
-const BASE = (import.meta.env?.BASE_URL ?? "/").replace(/\/?$/, "/")
-
-export const EXAMPLE_FRAME_PATH = `${BASE}workbench/example/`
-export const OPENTUI_ASSETS_URL = `${BASE}opentui/`
-export const OPENTUI_WASM_URL = `${OPENTUI_ASSETS_URL}opentui.wasm`
+// Root-relative like the rest of the site, so scripts/site/rebase-site.ts can move them under a base path.
+export const EXAMPLE_FRAME_PATH = "/workbench/example/"
+export const OPENTUI_ASSETS_URL = "/opentui/"
+export const OPENTUI_WASM_URL = "/opentui/opentui.wasm"
 
 export interface ExampleSource {
   code: string

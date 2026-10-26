@@ -5,7 +5,8 @@ import { encodeExampleHash } from "./example-protocol"
 
 // Code fences tagged `example` (see ProseCode.astro) get a run control. Running an
 // example shows its output below the code and makes the code editable; edits run again.
-const WORKBENCH_PATH = `${(import.meta.env.BASE_URL ?? "/").replace(/\/?$/, "/")}workbench`
+// Root-relative like the rest of the site, so scripts/site/rebase-site.ts can move it under a base path.
+const WORKBENCH_PATH = "/workbench"
 const RERUN_DELAY = 400
 
 interface ExampleBlock {
