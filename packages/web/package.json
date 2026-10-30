@@ -1,6 +1,6 @@
 {
   "name": "@opentui/web",
-  "version": "0.6.7",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -36,13 +36,16 @@
   },
   "dependencies": {
     "@astrojs/mdx": "^7.0.5",
+    "@astrojs/react": "7.1.2",
+    "@brett_lamy/docstream": "1.33.0",
     "@opentui/core": "workspace:*",
     "@opentui/keymap": "workspace:*",
     "astro": "^7.1.6",
     "ghostty-web": "^0.3.0",
     "monaco-editor": "^0.55.1",
     "open-ink": "workspace:*",
-    "react": ">=19.2.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "sucrase": "^3.35.1"
   },
   "devDependencies": {

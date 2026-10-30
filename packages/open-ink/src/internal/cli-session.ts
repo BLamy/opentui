@@ -72,9 +72,7 @@ function createFrameSource(renderer: CliRenderer, backgroundColor: string | unde
 
       const scene = renderer.nativeScene
       try {
-        if (scene.paint(0, () => ({ background, useMouse: false, excludedHitNum: 0 }))) {
-          throw new Error("open-ink: the native scene yielded while painting a synchronous frame")
-        }
+        scene.paint(0, () => ({ background, useMouse: false, excludedHitNum: 0 }))
         return readFrame(renderer.nextRenderBuffer)
       } catch (error) {
         if (error instanceof NativeError && error.status === NativeStatus.OutputBusy) {

@@ -6,6 +6,7 @@ import {
   OPENTUI_ASSETS_URL,
   OPENTUI_WASM_URL,
   decodeExampleHash,
+  exampleParentOrigin,
   type FrameMessage,
   type RunMessage,
 } from "./example-protocol"
@@ -16,6 +17,7 @@ const WASM_URL = new URL(OPENTUI_WASM_URL, location.href).href
 const ASSETS_URL = new URL(OPENTUI_ASSETS_URL, location.href).href
 const FONT_FAMILY = '"OpenTUI Mono", ui-monospace, monospace'
 const FONT_SIZE = 13
+const PARENT_ORIGIN = exampleParentOrigin(document.referrer, location.href)
 
 const surface = document.querySelector<HTMLElement>("[data-example-terminal]")
 let started = false
@@ -23,7 +25,7 @@ let currentRequest: string | undefined
 let writeError: ((message: string) => void) | null = null
 
 function post(message: FrameMessage): void {
-  if (window.parent !== window) window.parent.postMessage(message, location.origin)
+  if (window.parent !== window) window.parent.postMessage(message, PARENT_ORIGIN)
 }
 
 function report(status: "rendered" | "error", message?: string): void {
@@ -85,9 +87,11 @@ window.addEventListener("error", (event) => fail(event.error ?? event.message))
 window.addEventListener("unhandledrejection", (event) => fail(event.reason))
 
 window.addEventListener("message", (event: MessageEvent<FrameMessage>) => {
-  if (event.origin !== location.origin || event.source !== window.parent) return
+  if (event.origin !== PARENT_ORIGIN || event.source !== window.parent) return
   const message = event.data
   if (message?.type !== MESSAGE.run || !isExampleTheme(message.theme)) return
+  if (typeof message.code !== "string" || message.code.length > 1_000_000 || typeof message.language !== "string")
+    return
   start(message)
 })
 

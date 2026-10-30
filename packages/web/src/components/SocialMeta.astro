@@ -7,8 +7,9 @@ interface Props {
 }
 
 const { title, description, canonical = true } = Astro.props
-const canonicalUrl = new URL(Astro.url.pathname, Astro.site)
-const imageUrl = new URL("/social-card.png", Astro.site)
+const base = process.env.OPENTUI_SITE_BASE ?? ""
+const canonicalUrl = new URL(`${base}${Astro.url.pathname}`, Astro.site)
+const imageUrl = new URL(`${base}/social-card.png`, Astro.site)
 ---
 
 {canonical && <link rel="canonical" href={canonicalUrl} />}

@@ -1,6 +1,6 @@
 name: Deploy Fork to GitHub Pages
 
-# A fork's project site lives under /<repo>, without the package index or the release channel of opentui.com. This
+# A fork's project site lives under /<repo>. Include the same package index as opentui.com. This
 # builds the site from this checkout, with /docs and /docs/next both documenting it, and moves it under the base path.
 on:
   push:
@@ -22,9 +22,16 @@ jobs:
     runs-on: ubuntu-latest
     env:
       OPENTUI_SITE_BASE: /${{ github.event.repository.name }}
+      OPENTUI_SITE_URL: https://${{ github.repository_owner }}.github.io
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Checkout package index
+        uses: actions/checkout@v6
+        with:
+          repository: anomalyco/opentui-index
+          path: opentui-index
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -54,9 +61,21 @@ jobs:
 
       - name: Build site
         working-directory: packages/web
+        env:
+          OPENTUI_INDEX_DIR: ${{ github.workspace }}/opentui-index/packages
         run: |
           bun run build
           bun scripts/site/rebase-site.ts dist "$OPENTUI_SITE_BASE"
+
+      - name: Check runnable documentation and deployment assets
+        working-directory: packages/web
+        run: |
+          bun test src/lib/docstream-markdown.test.ts src/scripts/example-compiler.test.ts src/scripts/example-protocol.test.ts
+          bun test --preload ../core/src/browser/wasm-test-preload.ts src/scripts/example-docs.test.ts
+          test -s dist/opentui/opentui.wasm
+          test -s dist/opentui/parser.worker.browser.js
+          test -s dist/workbench/example/index.html
+          test -s dist/packages/index.html
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v5

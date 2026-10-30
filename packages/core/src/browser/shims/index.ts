@@ -12,6 +12,7 @@ const shims: Record<string, string> = {
   path: "path.ts",
   process: "process.ts",
   stream: "stream.ts",
+  string_decoder: "string-decoder.ts",
   url: "url.ts",
   util: "util.ts",
 }

@@ -181,6 +181,14 @@ const transpileEntryPoint = (entryPoint: string, outputPath: string): void => {
   }
 }
 
+// Zig stores archive inputs of a static library as nested members, which other linkers cannot read.
+function checkStaticArchive(path: string): void {
+  if (!existsSync(path)) return
+  const members = execFileSync("zig", ["ar", "t", path], { cwd: nativeRoot, encoding: "utf8" }).split(/\r?\n/)
+  const nested = members.filter((member) => /\.(a|lib)$/.test(member))
+  if (nested.length > 0) throw new Error(`${path} contains nested archives: ${nested.join(", ")}`)
+}
+
 if (buildNative) {
   runCommand(
     "bun",
@@ -192,13 +200,18 @@ if (buildNative) {
 
   const zigArgs = ["build", `-Doptimize=${isDev ? "Debug" : "ReleaseFast"}`]
   if (buildAll) {
-    zigArgs.push("-Dall")
+    // Release builds must never fall back to building without video.
+    zigArgs.push("-Dall", "-Drequire-video")
   }
   if (gpaSafeStats) {
     zigArgs.push("-Dgpa-safe-stats=true")
   }
 
-  if (!skipZig) runCommand("zig", zigArgs, nativeRoot, "Error: Zig build failed")
+  if (!skipZig) {
+    // Native video statically links FFmpeg; prepare:zig builds only the host prefixes.
+    if (buildAll) runCommand("bun", ["scripts/build-ffmpeg.ts", "--all"], nativeRoot, "Error: FFmpeg build failed")
+    runCommand("zig", zigArgs, nativeRoot, "Error: Zig build failed")
+  }
 
   const variantsToPackage = buildAll ? variants : [getHostVariant()]
 
@@ -232,6 +245,8 @@ if (buildNative) {
       rmSync(nativeDir, { recursive: true, force: true })
       continue
     }
+
+    checkStaticArchive(join(libDir, platform === "win32" ? "opentui-static.lib" : "libopentui.a"))
 
     if (!isDev && !skipSymbols && libraryFileName) {
       separateNativeSymbols({
@@ -272,7 +287,8 @@ export default module.default
           main: "index.js",
           module: "index.js",
           types: "index.d.ts",
-          license: packageJson.license,
+          // The binaries statically link LGPL FFmpeg.
+          license: `${packageJson.license} AND LGPL-2.1-or-later`,
           author: packageJson.author,
           homepage: packageJson.homepage,
           repository: packageJson.repository,
@@ -310,6 +326,9 @@ export default module.default
       [join(nativeRoot, "src", "vendor", "libwebp", "PATENTS"), "PATENTS-LIBWEBP"],
       [join(nativeRoot, "src", "vendor", "libwebp", "AUTHORS"), "AUTHORS-LIBWEBP"],
       [join(nativeRoot, "src", "vendor", "lcms2", "LICENSE"), "LICENSE-LCMS2"],
+      [join(nativeRoot, "src", "vendor", "ffmpeg", "COPYING.LGPLv2.1"), "LICENSE-FFMPEG"],
+      [join(nativeRoot, "src", "vendor", "ffmpeg", "README.md"), "FFMPEG-SOURCE.md"],
+      [join(nativeRoot, "src", "vendor", "ffmpeg", "LICENSE-ZLIB"), "LICENSE-ZLIB"],
     ] as const) {
       if (!existsSync(source)) throw new Error(`Required native license file is missing: ${source}`)
       copyFileSync(source, join(nativeDir, destination))

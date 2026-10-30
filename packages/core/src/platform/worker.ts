@@ -165,10 +165,36 @@ function loadWorkerConstructor(): PlatformWorkerConstructor {
   return UnsupportedWorker
 }
 
-function createModuleWorkerConstructor(BrowserWorker: PlatformWorkerConstructor): PlatformWorkerConstructor {
+export function createModuleWorkerConstructor(
+  BrowserWorker: PlatformWorkerConstructor,
+  origin: string | undefined = globalThis.origin,
+): PlatformWorkerConstructor {
   return class ModuleWorker extends BrowserWorker {
+    private readonly bootstrap: string | undefined
+
     constructor(specifier: string | URL, options: PlatformWorkerOptions = {}) {
-      super(specifier, { ...options, type: "module" } as PlatformWorkerOptions)
+      const address = new URL(specifier, globalThis.location?.href)
+      // Opaque sandboxes and CDN-hosted workers cannot start an HTTP-origin
+      // worker directly. A local blob imports the CORS-enabled module instead.
+      const bootstrap =
+        origin && address.origin !== origin && /https?:/.test(address.protocol)
+          ? URL.createObjectURL(new Blob([`import ${JSON.stringify(address.href)};`], { type: "text/javascript" }))
+          : undefined
+      try {
+        super(bootstrap ?? specifier, { ...options, type: "module" } as PlatformWorkerOptions)
+      } catch (error) {
+        if (bootstrap) URL.revokeObjectURL(bootstrap)
+        throw error
+      }
+      this.bootstrap = bootstrap
+    }
+
+    override terminate(): void | Promise<number> {
+      try {
+        return super.terminate()
+      } finally {
+        if (this.bootstrap) URL.revokeObjectURL(this.bootstrap)
+      }
     }
   } as PlatformWorkerConstructor
 }

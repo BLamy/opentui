@@ -37,11 +37,13 @@ describe("package facts", () => {
     ])
   })
 
-  test("loads workspace facts from all eight native variants", async () => {
+  test("loads workspace facts including the shared React runtime and all eight native variants", async () => {
     const facts = await loadFirstPartyPackageFacts()
     const core = facts.find((fact) => fact.id === "opentui-core")
 
-    expect(facts).toHaveLength(8)
+    expect(facts).toHaveLength(9)
+    expect(facts.find((fact) => fact.id === "opentui-react-runtime")?.entrypoints).toContain(".")
+    expect(core?.entrypoints).toContain("./browser")
     expect(core?.entrypoints).toContain("./testing")
     expect(core?.platformPackages).toHaveLength(8)
     expect(core?.platforms).toHaveLength(8)

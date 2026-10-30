@@ -21,6 +21,22 @@ OpenCode uses OpenTUI in production for millions of users.
 
 [Website](https://opentui.com) | [Documentation](https://opentui.com/docs) | [Workbench](https://opentui.com/workbench) | [Packages](https://opentui.com/packages)
 
+## Browser fork
+
+This fork tracks OpenTUI 0.8.0 and retains the browser `wasm32-wasi` renderer.
+Its [Docstream documentation](https://blamy.github.io/opentui/docs/),
+[packages](https://blamy.github.io/opentui/packages/), and
+[workbench](https://blamy.github.io/opentui/workbench/) deploy to GitHub Pages.
+
+Complete documentation examples run in sandboxed embedded terminals. The same `TuiPreview` / `TuiEmbed` components
+are available in `@brett_lamy/docstream/tui` and `@brett_lamy/ui/tui` for AI responses. See
+[Browser and embedded TUIs](https://blamy.github.io/opentui/docs/getting-started/browser/) for source, hosting,
+keyboard input, and native-only capability limits. The Pages build includes the community package index.
+
+Build WASM with `bun run build:wasm` in `packages/core`, then `bun run build:lib` there and `bun run build` in
+`packages/web`. The [deployment metadata](https://blamy.github.io/opentui/build-info.json) records the versions and
+source revision actually published.
+
 ## Packages
 
 - [`@opentui/core`](packages/core) - Native terminal UI library with TypeScript bindings.

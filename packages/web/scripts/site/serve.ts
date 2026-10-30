@@ -19,9 +19,9 @@ const server = Bun.serve({
     if (info?.isDirectory()) {
       if (!url.pathname.endsWith("/")) return Response.redirect(`${url.pathname}/${url.search}`, 301)
       const index = Bun.file(join(file, "index.html"))
-      if (await index.exists()) return new Response(index)
+      if (await index.exists()) return new Response(index, { headers: { "Access-Control-Allow-Origin": "*" } })
     } else if (info?.isFile()) {
-      return new Response(Bun.file(file))
+      return new Response(Bun.file(file), { headers: { "Access-Control-Allow-Origin": "*" } })
     }
     return new Response(Bun.file(join(root, "404.html")), { status: 404, headers: { "content-type": "text/html" } })
   },

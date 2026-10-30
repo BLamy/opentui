@@ -4,6 +4,7 @@ import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import type { AstroIntegration, AstroUserConfig } from "astro"
 import { browserShimAliases } from "../../../core/src/browser/shims/index.ts"
+import { writeBuildInfo } from "../../scripts/site/build-info"
 
 // Live examples run @opentui/core in the page against opentui.wasm. The site serves
 // the wasm at this path; build it with `bun run build:wasm` in packages/core.
@@ -68,6 +69,7 @@ export function opentuiBrowser(): AstroIntegration {
         server.middlewares.use(`/${OPENTUI_WASM_PATH}`, (_request, response, next) => {
           if (!existsSync(source)) return next()
           response.setHeader("Content-Type", "application/wasm")
+          response.setHeader("Access-Control-Allow-Origin", "*")
           createReadStream(source).pipe(response)
         })
         if (!existsSync(join(CORE_DIST, "parser.worker.browser.js"))) logger.warn(missingAssetsWarning())
@@ -77,10 +79,12 @@ export function opentuiBrowser(): AstroIntegration {
           const allowed = CORE_BROWSER_ASSETS.some((asset) => name === asset || name.startsWith(`${asset}/`))
           if (!allowed || !path.startsWith(CORE_DIST) || !existsSync(path)) return next()
           response.setHeader("Content-Type", contentType(path))
+          response.setHeader("Access-Control-Allow-Origin", "*")
           createReadStream(path).pipe(response)
         })
       },
       "astro:build:done": async ({ dir, logger }) => {
+        await writeBuildInfo(fileURLToPath(dir))
         const source = wasmSource()
         if (!existsSync(source)) {
           logger.warn(missingWasmWarning(source))

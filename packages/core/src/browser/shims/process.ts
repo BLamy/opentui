@@ -26,6 +26,8 @@ class ProcessStream extends EventEmitter {
 }
 
 class BrowserProcess extends EventEmitter {
+  readonly browser = true
+  readonly version = ""
   readonly env: Record<string, string | undefined> = {}
   readonly platform = "browser"
   readonly arch = "wasm32"

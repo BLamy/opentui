@@ -1,13 +1,11 @@
 ---
-import { getCollection, render } from "astro:content"
-import ProseCode from "../../components/ProseCode.astro"
-import ProseH2 from "../../components/ProseH2.astro"
-import ProseH3 from "../../components/ProseH3.astro"
-import ProseLink from "../../components/ProseLink.astro"
-import ProseTable from "../../components/ProseTable.astro"
+import { getCollection } from "astro:content"
+import { documentOutline, parseMarkdown } from "@brett_lamy/docstream/gitbook"
+import DocstreamContent from "../../components/DocstreamContent.astro"
 import Docs from "../../layouts/Docs.astro"
-import { buildChannels, channelUrl, docsRouteParam } from "../../lib/docs-channel"
+import { buildChannels, channelUrl, docsRouteParam, pageChannel } from "../../lib/docs-channel"
 import { buildDocsIndex } from "../../lib/docs-index"
+import { docstreamParts } from "../../lib/docstream-markdown"
 
 export async function getStaticPaths() {
   const [docs, docsIndex] = await Promise.all([getCollection("docs"), buildDocsIndex()])
@@ -23,9 +21,13 @@ export async function getStaticPaths() {
 
 const { entry, page } = Astro.props
 if (!entry || !page) throw new Error("Missing documentation route entry")
-const { Content, headings } = await render(entry)
+const base = process.env.OPENTUI_SITE_BASE
+const parts = docstreamParts(entry.body ?? "", pageChannel(Astro.url.pathname), base ? new URL(`${base}/`, Astro.site).href : undefined)
+const headings = parts.flatMap((part) => part.type === "markdown"
+  ? documentOutline(parseMarkdown(part.markdown)).map(({ level, id, text }) => ({ depth: level, slug: id, text }))
+  : [])
 ---
 
 <Docs title={entry.data.title} description={entry.data.description} slug={page.slug} headings={headings}>
-  <Content components={{ pre: ProseCode, table: ProseTable, h2: ProseH2, h3: ProseH3, a: ProseLink }} />
+  <DocstreamContent {parts} />
 </Docs>

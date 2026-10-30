@@ -1,0 +1,31 @@
+---
+import DocstreamArticle from "./DocstreamArticle"
+import MousePointerPreview from "./MousePointerPreview.astro"
+import ScrollbackRecording from "./ScrollbackRecording.astro"
+import type { ArticlePart } from "../lib/docstream-markdown"
+import "@brett_lamy/docstream/styles.css"
+
+interface Props { parts: ArticlePart[] }
+const { parts } = Astro.props
+// rebase-site.ts prefixes this together with every other root-relative URL.
+const runtimeUrl = "/workbench/example/"
+---
+
+{parts.map((part) => part.type === "markdown" ? (
+  <DocstreamArticle markdownBase64={Buffer.from(part.markdown).toString("base64")} {runtimeUrl} client:load />
+) : part.type === "mouse-pointers" ? (
+  <MousePointerPreview />
+) : (
+  <ScrollbackRecording label={part.label} controls="hidden" stories={[{ src: "/recordings/quickstart.json", tone: "recorded", background: "recorded", padding: false }]} />
+))}
+
+<style is:global>
+  .prose [data-docstream] { --font-mono: "OpenTUI Mono", ui-monospace, monospace; }
+  .prose .docs-article { padding: 0; max-width: none; font: inherit; color: inherit; background: transparent; }
+  .prose .docs-article :is(p, ul, ol, h1, h2, h3, h4) { max-width: var(--content-width); }
+  .prose .docs-code { border-radius: 0; }
+  .prose .docs-code pre { background: transparent; }
+  .prose .docs-code code { font-family: "OpenTUI Mono", ui-monospace, monospace; }
+  .prose .docs-code span { color: inherit !important; }
+  .prose [data-slot="tui-preview"] { border-radius: 0 !important; }
+</style>

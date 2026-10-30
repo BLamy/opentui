@@ -1,5 +1,6 @@
 import { defineConfig } from "astro/config"
 import mdx from "@astrojs/mdx"
+import react from "@astrojs/react"
 import { buildChannels, docsRedirects } from "./src/lib/docs-channel.ts"
 import { opentuiBrowser } from "./src/lib/opentui-browser.ts"
 
@@ -126,8 +127,8 @@ const codeCobalt = {
 
 // scripts/build-site.ts writes the sitemap after it merges the channels.
 export default defineConfig({
-  integrations: [mdx(), opentuiBrowser()],
-  site: "https://opentui.com",
+  integrations: [mdx(), react(), opentuiBrowser()],
+  site: process.env.OPENTUI_SITE_URL ?? "https://opentui.com",
   build: {
     // The release channel's build keeps its assets under /docs so its tree can be merged into the main build.
     assets: process.env.OPENTUI_ASTRO_ASSETS || "_astro",
@@ -135,6 +136,8 @@ export default defineConfig({
   vite: {
     server: {
       allowedHosts: true,
+      // Opaque terminal sandboxes send Origin: null, including in local docs.
+      cors: { origin: ["null", /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/] },
     },
     // A build for a base path (scripts/site/rebase-site.ts) makes scripts load their chunks relative to themselves,
     // so the preload paths that Vite writes need no rewriting.

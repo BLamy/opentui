@@ -36,6 +36,16 @@ export interface StatusMessage {
 
 export type FrameMessage = RunMessage | ReadyMessage | StatusMessage
 
+// A sandbox has an opaque origin. Its parent still has the origin supplied by
+// the browser's referrer, including when Docstream is hosted on another site.
+export function exampleParentOrigin(referrer: string, fallback: string): string {
+  try {
+    return new URL(referrer || fallback).origin
+  } catch {
+    return new URL(fallback).origin
+  }
+}
+
 function toBase64Url(text: string): string {
   let binary = ""
   for (const byte of new TextEncoder().encode(text)) binary += String.fromCharCode(byte)

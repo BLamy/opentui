@@ -1,0 +1,88 @@
+---
+title: Browser and embedded TUIs
+description: Run the fork's OpenTUI renderer in WebAssembly and embed interactive terminal programs in documentation and AI responses
+skill:
+  intents: [browser, wasm, embedded-tui, docstream]
+---
+
+# Browser and embedded TUIs
+
+This fork builds OpenTUI's Zig renderer for `wasm32-wasi`. Terminal programs run in the browser against that compiled renderer, with keyboard and resize events supplied by a browser terminal.
+
+The documentation uses Docstream. Complete code fences marked `example` have an embedded terminal: select **Run**, focus the terminal, and interact with it. **Stop** releases the program's frame; **Run** starts a new instance. Incomplete code fragments remain source examples.
+
+## Try keyboard input
+
+Run this program, focus its terminal, and press the arrow keys. The count changes through OpenTUI's actual input and render loop.
+
+```typescript example
+import { BoxRenderable, TextRenderable, createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer({ exitOnCtrlC: true })
+const panel = new BoxRenderable(renderer, {
+  border: true,
+  padding: 1,
+  width: "100%",
+  height: 7,
+  flexDirection: "column",
+})
+const counter = new TextRenderable(renderer, { content: "Count 0" })
+panel.add(new TextRenderable(renderer, { content: "Left / Right: change count · q: quit" }))
+panel.add(counter)
+renderer.root.add(panel)
+
+let count = 0
+renderer.keyInput.on("keypress", (key) => {
+  if (key.name === "q") return renderer.destroy()
+  if (key.name === "left") count--
+  else if (key.name === "right") count++
+  else return
+  counter.content = `Count ${count}`
+})
+```
+
+## Embed a TUI in a response
+
+Docstream recognizes a `tui` code fence, or a JavaScript, TypeScript, JSX, or TSX fence with `tui` metadata. A response can include a complete program in that fence. Its source stays visible, and the reader starts execution with **Run** after the response finishes streaming.
+
+````markdown
+```typescript tui
+import { TextRenderable, createCliRenderer } from "@opentui/core"
+const renderer = await createCliRenderer()
+renderer.root.add(new TextRenderable(renderer, { content: "Hello from a TUI" }))
+```
+````
+
+React hosts can use `TuiPreview` or its `TuiEmbed` alias from `@brett_lamy/docstream/tui`. The same components are exported by `@brett_lamy/ui`.
+
+```tsx
+import { TuiPreview } from "@brett_lamy/docstream/tui"
+;<TuiPreview code={program} language="typescript" height={320} />
+```
+
+Each preview runs in its own sandboxed frame. The frame receives the program through a ready/run/status handshake; a loaded page is not counted as a rendered terminal. Restarting replaces the frame, including timers, globals, and event handlers from the previous program.
+
+## Build and host the runtime
+
+Build the browser runtime and documentation from this repository:
+
+```bash
+bun install --frozen-lockfile
+cd packages/core
+bun run build:wasm
+bun run build:lib
+cd ../web
+bun run build
+```
+
+The browser frame is `/workbench/example/`. It loads `opentui/opentui.wasm`, the tree-sitter worker and grammars, and the browser terminal assets from the same deployment. The GitHub Pages workflow publishes these beneath the repository's project path and checks that the required assets exist.
+
+For another host, supply the frame's URL with `TuiPreview`'s `runtimeUrl` prop or `GitbookStreamdown`'s `tui={{ runtimeUrl }}` option. Serve the runtime's JavaScript, fonts, workers, and WASM with CORS enabled so an opaque sandbox can load them.
+
+## Browser capabilities
+
+Layout, text, input, selection, scrolling, code highlighting, and the supported React and open-ink examples use the WASM renderer. The [component reference](/docs/components) includes runnable examples where the example is a complete browser program. The [workbench](/workbench) runs editable programs against the same runtime.
+
+Native OS processes, SSH listening, audio device output, and FFmpeg video decoding require a native host and are not available in the browser renderer. Their documentation describes the native API; the browser does not simulate those features. OpenCode's browser application supplies its filesystem, SQLite, and process services through its browser runtime separately.
+
+The [packages page](/packages) includes the first-party packages and the current community index from `anomalyco/opentui-index`.

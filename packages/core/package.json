@@ -9,7 +9,7 @@
   "types": "src/index.ts",
   "module": "src/index.ts",
   "main": "src/index.ts",
-  "version": "0.6.7",
+  "version": "0.8.0",
   "type": "module",
   "imports": {
     "#opentui/runtime-assets": {
@@ -28,11 +28,12 @@
     "test:abi": "bun test scripts/native-abi.test.ts",
     "test:branch-cov": "bun scripts/branch-cov.ts",
     "prepare:native": "cd ../native && bun run prepare:zig",
+    "prepare:wasm": "cd ../native && sh scripts/prepare-zig-deps.sh",
     "build:native": "bun run prepare:native && bun scripts/build.ts --native",
     "build:native:dev": "bun run prepare:native && bun scripts/build.ts --native --dev",
-    "build:wasm": "bun run prepare:native && bun scripts/build.ts --wasm",
-    "build:wasm:dev": "bun run prepare:native && bun scripts/build.ts --wasm --dev",
-    "test:wasm": "bun test --preload ./src/browser/wasm-test-preload.ts --path-ignore-patterns='src/zig/zig-pkg/**' --path-ignore-patterns='src/tests/audio*.test.ts' --path-ignore-patterns='src/tests/renderer.kitty-transport.test.ts'",
+    "build:wasm": "bun run prepare:wasm && bun scripts/build.ts --wasm",
+    "build:wasm:dev": "bun run prepare:wasm && bun scripts/build.ts --wasm --dev",
+    "test:wasm": "bun test --preload ./src/browser/wasm-test-preload.ts --path-ignore-patterns='src/zig/zig-pkg/**' --path-ignore-patterns='src/tests/audio*.test.ts' --path-ignore-patterns='src/tests/video-renderable.test.ts' --path-ignore-patterns='src/tests/renderer.kitty-transport.test.ts'",
     "vendor:update:images": "cd ../native && sh src/vendor/update.sh",
     "vendor:update:zig": "cd ../native && sh src/vendor/update-zig-deps.sh",
     "test:native": "cd ../native && bun run test",
@@ -83,14 +84,14 @@
     "web-tree-sitter": "0.25.10"
   },
   "optionalDependencies": {
-    "@opentui/core-darwin-x64": "0.6.7",
-    "@opentui/core-darwin-arm64": "0.6.7",
-    "@opentui/core-linux-x64": "0.6.7",
-    "@opentui/core-linux-arm64": "0.6.7",
-    "@opentui/core-win32-x64": "0.6.7",
-    "@opentui/core-win32-arm64": "0.6.7",
-    "@opentui/core-linux-x64-musl": "0.6.7",
-    "@opentui/core-linux-arm64-musl": "0.6.7"
+    "@opentui/core-darwin-x64": "0.8.0",
+    "@opentui/core-darwin-arm64": "0.8.0",
+    "@opentui/core-linux-x64": "0.8.0",
+    "@opentui/core-linux-arm64": "0.8.0",
+    "@opentui/core-win32-x64": "0.8.0",
+    "@opentui/core-win32-arm64": "0.8.0",
+    "@opentui/core-linux-x64-musl": "0.8.0",
+    "@opentui/core-linux-arm64-musl": "0.8.0"
   },
   "exports": {
     ".": {
